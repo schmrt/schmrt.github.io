@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">Contact icon placeholder</title>
+  <desc id="desc">Replace with a small icon or graphic</desc>
+  <circle cx="100" cy="100" r="92" fill="#E1EAF9" stroke="#8FA9C9" stroke-width="4" stroke-dasharray="10 8"/>
+  <circle cx="100" cy="100" r="46" fill="none" stroke="#4A6FA5" stroke-width="8"/>
+  <path d="M 100 66 L 112 94 L 140 100 L 112 106 L 100 134 L 88 106 L 60 100 L 88 94 Z" fill="#4A6FA5"/>
+</svg>
