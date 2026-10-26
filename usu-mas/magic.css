@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background-color: #e1eaf9;
@@ -31,15 +35,64 @@ h2 {
   color: #4494da;
 }
 
+h2::before {
+  content: "\2726";
+  color: #0F2439;
+  font-size: .75em;
+  margin-right: .5em;
+}
+
 nav {
   background-color: #ffffff;
   border: 1px solid #dce6f5;
   border-radius: 12px;
   text-align: center;
   font-weight: bold;
-  padding: 0.85em;
+  padding: 0.5em;
   margin-bottom: 1.5em;
   box-shadow: 0 4px 16px rgba(15, 36, 57, 0.06);
+  position: sticky;
+  top: 1em;
+  z-index: 10;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav li {
+  display: inline-block;
+}
+
+nav a {
+  display: block;
+  padding: 0.6em 1.25em;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+nav a:link {
+  color: #0f2439;
+}
+
+nav a:visited {
+  color: #0f2439;
+}
+
+nav a:hover {
+  background-color: #e1eaf9;
+}
+
+nav a:active {
+  background-color: #4494da;
+  color: #ffffff;
+}
+
+nav a:focus {
+  outline: 3px solid #4494da;
+  outline-offset: 2px;
 }
 
 footer {
@@ -66,6 +119,8 @@ footer {
   padding: 1.5em 2em;
   margin-bottom: 1.5em;
   box-shadow: 0 4px 16px rgba(15, 36, 57, 0.06);
+  overflow: auto;
+  position: relative;
 }
 
 figure {
@@ -77,6 +132,12 @@ figure {
   text-align: center;
   box-shadow: 0 4px 16px rgba(15, 36, 57, 0.06);
   display: block;
+}
+
+.card figure {
+  float: left;
+  width: 220px;
+  margin: 0 1.75em 0.5em 0;
 }
 
 img.portrait {
@@ -98,4 +159,32 @@ figcaption {
   height: 72px;
   border-radius: 50%;
   border-style: none;
+}
+
+.badge {
+  position: absolute;
+  top: 1.25em;
+  right: 1.5em;
+  background-color: #4494da;
+  color: #ffffff;
+  font-size: 0.7em;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.4em 0.9em;
+  border-radius: 999px;
+}
+
+.column-left {
+  float: left;
+  width: 48%;
+}
+
+.column-right {
+  float: right;
+  width: 48%;
+}
+
+.clear {
+  clear: both;
 }
