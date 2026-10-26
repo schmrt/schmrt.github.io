@@ -1,1 +1,74 @@
-<h1>This is where my final project will live</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ryan Schmelter | Photography, Writing &amp; Projects</title>
+  <meta name="description" content="Personal site of Ryan Schmelter: a photography portfolio, a blog, and the status of my self-hosted services.">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+
+  <!-- Loading screen: the logo draws itself, then the screen lifts away -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <svg class="logo logo--loader" viewBox="0 0 120 120" role="img">
+      <path class="logo__r" d="M26 86 V34 H46 a12 12 0 0 1 0 24 H26 M44 58 L58 86"/>
+      <path class="logo__s" d="M96 41 C96 34 88 32 80 32 C70 32 66 38 66 45 C66 53 74 55 80 59 C88 63 96 65 96 73 C96 80 90 86 80 86 C72 86 66 83 64 78"/>
+    </svg>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Ryan Schmelter, home">
+      <svg class="logo logo--small" viewBox="0 0 120 120" aria-hidden="true">
+        <path class="logo__r" d="M26 86 V34 H46 a12 12 0 0 1 0 24 H26 M44 58 L58 86"/>
+        <path class="logo__s" d="M96 41 C96 34 88 32 80 32 C70 32 66 38 66 45 C66 53 74 55 80 59 C88 63 96 65 96 73 C96 80 90 86 80 86 C72 86 66 83 64 78"/>
+      </svg>
+      <span class="brand__name">Ryan Schmelter</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#photography">Photography</a>
+      <a href="#blog">Blog</a>
+      <a href="#status">Status</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero: swap the --hero-image variable in style.css for a real photo -->
+    <section class="hero">
+      <div class="hero__inner">
+        <p class="hero__eyebrow">Photography &middot; Writing &middot; Homelab</p>
+        <h1 class="hero__title">Ryan<br>Schmelter</h1>
+        <a class="button" href="#photography">See the work</a>
+      </div>
+      <p class="hero__caption">Hero photo placeholder</p>
+    </section>
+
+    <section class="sections" aria-label="Sections of the site">
+      <a class="card reveal" id="photography" href="#photography">
+        <span class="card__number">01</span>
+        <h2 class="card__title">Photography</h2>
+        <p class="card__text">Galleries of my favorite shots, given room to breathe.</p>
+        <span class="card__link">Browse galleries <span aria-hidden="true">&rarr;</span></span>
+      </a>
+      <a class="card reveal" id="blog" href="#blog">
+        <span class="card__number">02</span>
+        <h2 class="card__title">Blog</h2>
+        <p class="card__text">Notes on school projects and whatever I've been reading up on.</p>
+        <span class="card__link">Read the posts <span aria-hidden="true">&rarr;</span></span>
+      </a>
+      <a class="card reveal" id="status" href="#status">
+        <span class="card__number">03</span>
+        <h2 class="card__title">Status</h2>
+        <p class="card__text">Is something I host down? Check here first.</p>
+        <span class="card__link">Check services <span aria-hidden="true">&rarr;</span></span>
+      </a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; <span id="year">2026</span> Ryan Schmelter</p>
+  </footer>
+
+</body>
+</html>
