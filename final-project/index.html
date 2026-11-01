@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ryan Schmelter | Photography, Writing &amp; Projects</title>
   <meta name="description" content="Personal site of Ryan Schmelter: a photography portfolio, a blog, and the status of my self-hosted services.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/main.js" defer></script>
 </head>
@@ -13,16 +16,19 @@
   <!-- Loading screen: the logo draws itself, then the screen lifts away -->
   <div class="loader" id="loader" aria-hidden="true">
     <svg class="logo logo--loader" viewBox="0 0 120 120" role="img">
-      <path class="logo__r" d="M26 86 V34 H46 a12 12 0 0 1 0 24 H26 M44 58 L58 86"/>
-      <path class="logo__s" d="M96 41 C96 34 88 32 80 32 C70 32 66 38 66 45 C66 53 74 55 80 59 C88 63 96 65 96 73 C96 80 90 86 80 86 C72 86 66 83 64 78"/>
+      <path class="logo__frame" pathLength="100" d="M16 38 V16 H38"/>
+      <path class="logo__frame" pathLength="100" d="M82 16 H104 V38"/>
+      <path class="logo__frame" pathLength="100" d="M104 82 V104 H82"/>
+      <path class="logo__frame" pathLength="100" d="M38 104 H16 V82"/>
+      <text class="logo__text" x="60" y="75" font-size="44" text-anchor="middle" letter-spacing="1">R<tspan>S</tspan></text>
     </svg>
   </div>
 
   <header class="site-header">
     <a class="brand" href="./" aria-label="Ryan Schmelter, home">
       <svg class="logo logo--small" viewBox="0 0 120 120" aria-hidden="true">
-        <path class="logo__r" d="M26 86 V34 H46 a12 12 0 0 1 0 24 H26 M44 58 L58 86"/>
-        <path class="logo__s" d="M96 41 C96 34 88 32 80 32 C70 32 66 38 66 45 C66 53 74 55 80 59 C88 63 96 65 96 73 C96 80 90 86 80 86 C72 86 66 83 64 78"/>
+        <path class="logo__frame" d="M16 38 V16 H38 M82 16 H104 V38 M104 82 V104 H82 M38 104 H16 V82"/>
+        <text class="logo__text" x="60" y="75" font-size="44" text-anchor="middle" letter-spacing="1">R<tspan>S</tspan></text>
       </svg>
       <span class="brand__name">Ryan Schmelter</span>
     </a>
