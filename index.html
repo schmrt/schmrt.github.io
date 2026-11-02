@@ -1,43 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Dev Site</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Dev Site</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center px-6 py-16">
+<body>
 
-  <h1 class="text-4xl md:text-5xl font-bold text-center tracking-tight mb-12">
-    This is my dev site
-  </h1>
+  <h1>This is my dev site</h1>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
+  <div class="projects">
 
-    <!-- Card 1: USU College of Magic and Sorcery -->
-    <a href="/usu-mas" class="group relative rounded-2xl border border-slate-800 bg-slate-900 p-8 flex flex-col justify-between overflow-hidden transition hover:border-indigo-500 hover:-translate-y-1 duration-200">
-      <div class="absolute -top-16 -right-16 w-40 h-40 bg-indigo-600/20 rounded-full blur-2xl group-hover:bg-indigo-600/30 transition"></div>
-      <div class="relative">
-        <span class="inline-block text-xs uppercase tracking-wider text-indigo-400 font-semibold mb-3">Assignment</span>
-        <h2 class="text-xl font-semibold mb-2">USU College of Magic &amp; Sorcery</h2>
-        <p class="text-slate-400 text-sm">A landing page project built for the college's official site.</p>
-      </div>
-      <span class="relative mt-6 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:gap-2 transition-all">
-        View project →
-      </span>
+    <a class="project" href="usu-mas/">
+      <p class="label">Assignment</p>
+      <h2>USU College of Magic &amp; Sorcery</h2>
+      <p>A landing page project built for the college's official site.</p>
+      <p class="more">View project &rarr;</p>
     </a>
 
-    <!-- Card 2: Final Project -->
-    <a href="/final-project" class="group relative rounded-2xl border border-slate-800 bg-slate-900 p-8 flex flex-col justify-between overflow-hidden transition hover:border-teal-500 hover:-translate-y-1 duration-200">
-      <div class="absolute -top-16 -right-16 w-40 h-40 bg-teal-600/20 rounded-full blur-2xl group-hover:bg-teal-600/30 transition"></div>
-      <div class="relative">
-        <span class="inline-block text-xs uppercase tracking-wider text-teal-400 font-semibold mb-3">Final Project</span>
-        <h2 class="text-xl font-semibold mb-2">Final Project Website</h2>
-        <p class="text-slate-400 text-sm">The capstone site built across the second half of the semester.</p>
-      </div>
-      <span class="relative mt-6 inline-flex items-center gap-1 text-sm font-medium text-teal-400 group-hover:gap-2 transition-all">
-        View project →
-      </span>
+    <a class="project" href="final-project/">
+      <p class="label">Final Project</p>
+      <h2>Final Project Website</h2>
+      <p>The capstone site built across the second half of the semester.</p>
+      <p class="more">View project &rarr;</p>
     </a>
 
   </div>
