@@ -37,9 +37,9 @@ h2 {
 
 h2::before {
   content: "\2726";
-  color: #0F2439;
-  font-size: .75em;
-  margin-right: .5em;
+  color: #0f2439;
+  font-size: 0.75em;
+  margin-right: 0.5em;
 }
 
 nav {
@@ -123,6 +123,34 @@ footer {
   position: relative;
 }
 
+.column-left {
+  float: left;
+  width: 48%;
+}
+
+.column-right {
+  float: right;
+  width: 48%;
+}
+
+.clear {
+  clear: both;
+}
+
+.badge {
+  position: absolute;
+  top: 1.25em;
+  right: 1.5em;
+  background-color: #4494da;
+  color: #ffffff;
+  font-size: 0.7em;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.4em 0.9em;
+  border-radius: 999px;
+}
+
 figure {
   background-color: #ffffff;
   border: 1px solid #dce6f5;
@@ -161,30 +189,119 @@ figcaption {
   border-style: none;
 }
 
-.badge {
-  position: absolute;
-  top: 1.25em;
-  right: 1.5em;
-  background-color: #4494da;
-  color: #ffffff;
-  font-size: 0.7em;
+/*Tables*/
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+}
+
+th,
+td {
+  padding: 0.75em 1em;
+  text-align: left;
+  border-bottom: 1px solid #dce6f5;
+}
+
+caption {
+  text-align: left;
+  font-style: italic;
+  font-size: 0.85em;
+  color: #5a6878;
+  padding-bottom: 0.75em;
+}
+
+thead th {
+  background-color: #0F2439;
+  color: #FFFFFF;
+}
+
+tbody tr:nth-of-type(even) {
+  background-color: #F3F7FD;
+}
+
+tbody th {
+  font-weight: normal;
+  color: #0F2439;
+}
+
+tfoot th,
+tfoot td {
   font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.4em 0.9em;
+  border-top: 2px solid #0F2439;
+}
+
+/* Forms */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: .4em;
+}
+
+.field label,
+legend {
+  font-weight: bold;
+  color: #0F2439;
+}
+
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+  font: inherit;
+  padding: .7em .9em;
+  border: 1px solid #B8C7DD;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid #4494DA;
+  outline-offset: 2px;
+}
+
+fieldset {
+  border: 1px solid #DCE6F5;
+  border-radius: 8px;
+  padding: 1em 1.25em;
+  margin: 0;
+}
+
+fieldset label {
+  margin-right: 1.5em;
+}
+
+button {
+  font: inherit;
+  font-weight: bold;
+  background-color: #0F2439;
+  color: #FFFFFF;
+  padding: .8em 1.75em;
+  border: none;
   border-radius: 999px;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
-.column-left {
-  float: left;
-  width: 48%;
+button:hover {
+  background-color: #4494DA;
 }
 
-.column-right {
-  float: right;
-  width: 48%;
-}
-
-.clear {
-  clear: both;
+button:focus {
+  outline: 3px solid #4494DA;
+  outline-offset: 2px;
 }

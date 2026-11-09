@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,20 +6,19 @@
     <title>USU College of Magic and Sorcery - Admissions</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="magic.css" />
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg" />
   </head>
   <body>
+
     <header>
       <h1>College of Magic and Sorcery</h1>
       <p>Utah State University</p>
     </header>
 
     <div id="wrapper">
+
       <nav>
         <ul>
           <li><a href="index.html">Home</a></li>
@@ -30,14 +29,14 @@
       </nav>
 
       <main>
+
         <div class="card">
           <h2>Admissions</h2>
 
           <p>
-            The College of Magic and Sorcery welcomes applicants from all
-            backgrounds. Whether you discovered your abilities early or came to
-            magic later in life, we evaluate each candidate on the full picture
-            of their potential.
+            The College of Magic and Sorcery welcomes applicants from all backgrounds. Whether you
+            discovered your abilities early or came to magic later in life, we evaluate each
+            candidate on the full picture of their potential.
           </p>
         </div>
 
@@ -47,18 +46,9 @@
           <ul>
             <li>A completed USU undergraduate application</li>
             <li>High school transcript or equivalent</li>
-            <li>
-              Two letters of recommendation (at least one from a teacher or
-              mentor who can speak to your academic abilities)
-            </li>
-            <li>
-              A personal statement describing your interest in magic and what
-              you hope to accomplish during your studies
-            </li>
-            <li>
-              Demonstration of at least one observable magical ability
-              (submitted via the Magical Assessment Portal)
-            </li>
+            <li>Two letters of recommendation (at least one from a teacher or mentor who can speak to your academic abilities)</li>
+            <li>A personal statement describing your interest in magic and what you hope to accomplish during your studies</li>
+            <li>Demonstration of at least one observable magical ability (submitted via the Magical Assessment Portal)</li>
           </ul>
         </div>
 
@@ -67,45 +57,84 @@
 
           <ul>
             <li>A completed USU graduate application</li>
-            <li>
-              Official transcripts from all post-secondary institutions attended
-            </li>
-            <li>
-              Three letters of recommendation from academic or professional
-              references
-            </li>
+            <li>Official transcripts from all post-secondary institutions attended</li>
+            <li>Three letters of recommendation from academic or professional references</li>
             <li>A statement of research purpose</li>
             <li>A writing sample demonstrating scholarly analysis</li>
-            <li>
-              Prior coursework in magical theory, spellcraft, or an adjacent
-              discipline
-            </li>
+            <li>Prior coursework in magical theory, spellcraft, or an adjacent discipline</li>
           </ul>
         </div>
+
+        <div class="card">
+          <h2>Request Information</h2>
+          <p>
+            Not ready to apply yet? Tell us a little about yourself and what you're interested in
+            studying, and an admissions counselor will follow up with program details, upcoming
+            information session dates, and answers to any questions you have.
+          </p>
+          <form action="https://httpbin.org/post" method="post" target="_blank">
+
+            <div class="field">
+              <label for="full-name">Full name</label>
+              <input type="text" id="full-name" name="full-name" required />
+            </div>
+
+            <div class="field">
+              <label for="email">Email address</label>
+              <input type="email" id="email" name="email" placeholder="you@example.com" required />
+            </div>
+
+            <fieldset>
+              <legend>I am interested in</legend>
+              <input type="radio" id="level-undergrad" name="level" value="undergraduate" required />
+              <label for="level-undergrad">Undergraduate study</label>
+              <input type="radio" id="level-grad" name="level" value="graduate" />
+              <label for="level-grad">Graduate study</label>
+            </fieldset>
+
+            <div class="field">
+              <label for="program">Program of interest</label>
+              <select id="program" name="program" required>
+                <option value="" disabled selected>Choose a program</option>
+                <option value="spellcraft">B.A. in Spellcraft and Enchantment</option>
+                <option value="potions">B.S. in Potions and Alchemical Sciences</option>
+                <option value="creatures">B.A. in Magical Creature Studies</option>
+                <option value="mma">Master of Magical Arts</option>
+                <option value="doctorate">Doctor of Sorcery</option>
+                <option value="undecided">I'm not sure yet</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="questions">Questions or comments</label>
+              <textarea id="questions" name="questions" rows="5" placeholder="Ask us anything about the program, admissions, or campus life."></textarea>
+            </div>
+
+            <button type="submit">Send My Request</button>
+
+          </form>
 
         <div class="card">
           <h2>Contact Admissions</h2>
 
           <p>
-            Questions about the application process can be directed to the
-            College of Magic and Sorcery Admissions Office. We hold information
-            sessions each semester and encourage prospective students to attend.
+            Questions about the application process can be directed to the College of Magic and
+            Sorcery Admissions Office. We hold information sessions each semester and encourage
+            prospective students to attend.
           </p>
 
           <a href="mailto:admissions@magic.usu.edu" class="cta-link">
-            <img
-              src="images/icon-contact.svg"
-              alt="Contact the Admissions Office"
-            />
+            <img src="images/icon-contact.svg" alt="Contact the Admissions Office" />
           </a>
         </div>
+
       </main>
+
     </div>
 
     <footer>
-      <p>
-        Copyright &copy; USU College of Magic and Sorcery - All rights reserved.
-      </p>
+      <p>Copyright &copy; USU College of Magic and Sorcery - All rights reserved.</p>
     </footer>
+
   </body>
 </html>
