@@ -93,6 +93,29 @@ export function itemCorners(item, shrink = 0) {
     .map(([x, y]) => ({ x: item.x + x * cos - y * sin, y: item.y + x * sin + y * cos }));
 }
 
+/**
+ * The rectangles that make up an item's footprint, each shaped like an item ({ x, y, rot, w, d }).
+ * Most items are a single rectangle. An L-shaped sectional (an item with a `seat` depth) is two:
+ * the main run along its back, and the return that runs forward down one side. `side` says which
+ * side the return is on, as you face the front: 'right' is the item's local +x.
+ */
+export function itemParts(item) {
+  if (!(item.seat > 0)) return [item];
+  const { w, d } = item;
+  const s = Math.min(item.seat, w, d);
+  const k = item.side === 'left' ? -1 : 1;
+  const angle = (item.rot * Math.PI) / 180;
+  const cos = Math.cos(angle), sin = Math.sin(angle);
+  const place = (cx, cy, pw, pd) => ({ x: item.x + cx * cos - cy * sin, y: item.y + cx * sin + cy * cos, rot: item.rot, w: pw, d: pd });
+  return [
+    place(0, -d / 2 + s / 2, w, s),                         // main run, along the back
+    place(k * (w / 2 - s / 2), s / 2, s, Math.max(0.001, d - s)), // the return
+  ];
+}
+
+/** Corners of every rectangle in an item's footprint: a list of corner lists (see itemParts). */
+export const footprintQuads = (item, shrink = 0) => itemParts(item).map(part => itemCorners(part, shrink));
+
 /** Separating-axis test for two convex quads given as corner lists. */
 export function rectsOverlap(cornersA, cornersB) {
   for (const quad of [cornersA, cornersB]) {
@@ -110,8 +133,12 @@ export function rectsOverlap(cornersA, cornersB) {
   return true;
 }
 
-/** Is a plan point inside an item's footprint? `pad` grows the footprint, for easier clicking. */
+/** Is a plan point inside an item's footprint (its L shape, for a sectional)? `pad` grows it, for easier clicking. */
 export function pointInItem(point, item, pad = 0) {
+  return itemParts(item).some(part => pointInRect(point, part, pad));
+}
+
+function pointInRect(point, item, pad) {
   const angle = (-item.rot * Math.PI) / 180;
   const dx = point.x - item.x;
   const dy = point.y - item.y;

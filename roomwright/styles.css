@@ -63,7 +63,7 @@ button{cursor:pointer}
 .tabs button{flex:1;border:0;background:none;padding:9px 6px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--ink-2);border-bottom:3px solid transparent}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .panel{display:none;flex:1;min-height:0;overflow-y:auto;padding:12px;flex-direction:column;gap:16px}
-.app[data-tab="room"] #p-room,.app[data-tab="furnish"] #p-furnish,.app[data-tab="saved"] #p-saved{display:flex}
+.app[data-tab="room"] #p-room,.app[data-tab="furnish"] #p-furnish,.app[data-tab="frames"] #p-frames,.app[data-tab="saved"] #p-saved{display:flex}
 .right .panel{display:flex}
 
 .grp{display:flex;flex-direction:column;gap:8px}
@@ -106,7 +106,7 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:3px;p
 .stage3d{position:absolute;inset:0}
 .stage3d canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .stage3d canvas:active{cursor:grabbing}
-.sheet[data-view="3d"] #plan,.sheet[data-view="3d"] .only2d,.sheet:not([data-view="3d"]) .only3d{display:none}
+.sheet[data-view="3d"] #plan,.sheet[data-view="3d"] .only2d,.sheet:not([data-view="3d"]) .only3d,.sheet:not([data-view="plan"]) .onlyplan{display:none}
 .sheet[data-cam="walk"] #hint3d{right:150px}
 .walkpad{position:absolute;right:10px;bottom:10px;display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,40px);gap:4px;user-select:none;-webkit-user-select:none;touch-action:none}
 .walkpad button{padding:0;font-size:16px;line-height:1}
@@ -124,6 +124,23 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:3px;p
 .filebtn input{position:absolute;opacity:0;width:1px;height:1px;left:0;top:0}
 .filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .m-only{display:none}
+
+/* frames panel */
+.rowlbl{color:var(--ink-2)}
+.row .seg{justify-self:start}
+.frlist{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.frlist li{display:grid;grid-template-columns:14px minmax(0,1fr) auto minmax(0,1fr) auto auto;align-items:center;gap:5px;border:1px solid var(--line);border-radius:5px;padding:5px 6px;background:var(--panel);cursor:pointer}
+.frlist li[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.frlist .art{width:14px;height:18px;border:2px solid #2e2c2b;border-radius:1px}
+.frlist .art[data-warn="true"]{outline:2px dashed var(--warn);outline-offset:1px}
+.frlist .field{padding:4px 5px}
+.x{color:var(--ink-2);text-align:center}
+.btn.icon{padding:2px 7px;line-height:1.2}
+.frnew{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:center;gap:5px}
+.layouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.layout{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:4px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.15;text-align:center}
+.layout:hover{border-color:var(--ink-2)}
+.layout canvas{width:100%;height:72px;display:block;border-radius:3px}
 
 @media (max-width:880px){
   .work{display:flex;flex-direction:column;gap:10px}

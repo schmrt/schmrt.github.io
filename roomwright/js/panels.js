@@ -1,14 +1,16 @@
 // Everything outside the canvas: the top bar, the tool buttons and hint, the Room, Furnish
 // and Saved panels, and the inspector for whatever is selected.
 
-import { formatLength, parseLength, formatArea } from './units.js';
+import { INCH, formatLength, parseLength, formatArea } from './units.js';
 import { polygonArea, isSimplePolygon } from './geometry.js';
+import { suggestLayouts, artColor, frameBorders } from './frames.js';
+import { frameWall, faceX, framesOn, piecesAgainst, frameProblems } from './wallview.js';
 import {
   CATALOG, ITEM_DEFS, OPENING_DEFAULTS, FLOOR_MATERIALS, FINISH_COLORS, PAINT_COLORS, FLOOR_COLORS, materialsFor,
 } from './catalog.js';
 import {
   app, commit, undo, redo, requestDraw, findSelected, getWalls, findWall, wallColor, findIssues, fitView,
-  setTool, clampOpenings, addItem, addOpening, deleteSelection, duplicateSelection, rotateSelection,
+  setTool, setSelection, clampOpenings, fitSectional, addItem, addOpening, addFrame, deleteSelection, duplicateSelection, rotateSelection,
   applyTemplate, finishDrawing, clearItems, loadSample,
   saveToLibrary, openFromLibrary, deleteFromLibrary, exportPlanText, importPlanText,
 } from './state.js';
@@ -26,10 +28,16 @@ function swatches(palette, current, action) {
   ).join('');
 }
 
-/** Show a left-panel tab: 'room', 'furnish', 'saved', or (on phones) 'selected' for the inspector. */
+/**
+ * Show a left-panel tab: 'room', 'furnish', 'frames', 'saved', or (on phones) 'selected' for the
+ * inspector. The Frames tab brings up the wall view; leaving it for another panel goes back to the plan.
+ */
 export function setTab(tab) {
   $('#app').dataset.tab = tab;
   document.querySelectorAll('.tabs button').forEach(button => button.setAttribute('aria-selected', button.dataset.tab === tab));
+  if (tab === 'frames' && app.sheetView !== 'wall') setView('wall');
+  else if (tab !== 'frames' && tab !== 'selected' && app.sheetView === 'wall') setView('plan');
+  app.dirty.panels = true;
 }
 
 /* ------------------------------------------------------------------ inspector */
@@ -48,6 +56,7 @@ function itemInspector(item) {
       <label>Depth<input class="field" id="f-d" data-f="d" value="${length(item.d)}"></label>
       <label>Height<input class="field" id="f-h" data-f="h" value="${length(item.h)}"></label></div>
       <p class="note">${units() === 'metric' ? 'Plain numbers are centimetres. 1.8 m also works.' : 'Plain numbers are inches. 6\' 2" also works.'}</p></div>
+    ${item.seat > 0 ? sectionalFields(item) : ''}
     <div class="grp"><h3>Rotation</h3>
       <div class="row"><label for="f-rot">Degrees</label><input class="field" id="f-rot" data-f="rot" type="number" step="15" value="${Math.round(item.rot)}"></div>
       <div class="btns"><button class="btn small" data-act="rotate" data-v="-90">Turn left 90°</button><button class="btn small" data-act="rotate" data-v="90">Turn right 90°</button></div></div>
@@ -55,6 +64,37 @@ function itemInspector(item) {
       <div class="row"><label for="f-mat">Material</label><select class="field" id="f-mat" data-f="material">${materialOptions}</select></div>
       <div class="chips">${swatches(FINISH_COLORS, item.color, 'color')}<input type="color" id="f-color" data-f="color" value="${item.color}" aria-label="Custom colour"></div></div>
     <div class="btns"><button class="btn small" data-act="duplicate">Duplicate</button><button class="btn small danger" data-act="delete">Delete</button></div>`;
+}
+
+function sectionalFields(item) {
+  const pressed = side => `aria-pressed="${item.side === side}"`;
+  return `
+    <div class="grp"><h3>Sectional</h3>
+      <div class="row"><label for="f-seat">Seat depth</label><input class="field" id="f-seat" data-f="seat" value="${length(item.seat)}"></div>
+      <div class="row"><span class="rowlbl">Return on</span><div class="seg" role="group" aria-label="Return side">
+        <button data-act="side" data-v="left" ${pressed('left')}>Left</button><button data-act="side" data-v="right" ${pressed('right')}>Right</button></div></div>
+      <p class="note">Width and depth are the overall size. Seat depth is how deep each run is, back to front. Left and right are as you face the sofa.</p></div>`;
+}
+
+const FRAME_PROBLEMS = {
+  opening: 'This frame covers a window or door.',
+  frame: 'This frame overlaps another frame.',
+  furniture: 'This frame hangs down behind a piece of furniture.',
+};
+
+function frameInspector(frame) {
+  const wall = findWall(frame.wall);
+  const problem = frameProblems()[frame.id];
+  return `
+    <div class="grp"><p class="lbl">Wall ${wall.index + 1} · ${frame.w > frame.h ? 'landscape' : frame.w < frame.h ? 'portrait' : 'square'}</p><h2 class="title">Picture frame</h2></div>
+    ${problem ? `<p class="warnbox">${FRAME_PROBLEMS[problem]}</p>` : ''}
+    <div class="grp">
+      <div class="row"><label for="f-fw">Width</label><input class="field" id="f-fw" data-f="fw" value="${length(frame.w)}"></div>
+      <div class="row"><label for="f-fh">Height</label><input class="field" id="f-fh" data-f="fh" value="${length(frame.h)}"></div>
+      <div class="row"><label for="f-alt">Centre at</label><input class="field" id="f-alt" data-f="alt" value="${length(frame.alt)}"></div>
+      <div class="row"><label for="f-left">From left</label><input class="field" id="f-left" data-f="left" value="${length(faceX(wall, frame.pos) - frame.w / 2)}"></div>
+      <p class="note">Sizes are the outside of the frame. "Centre at" is the height of its middle above the floor; "From left" is from the left end of the wall, as you face it, to the frame's left edge.</p></div>
+    <div class="btns"><button class="btn small" data-act="rotate" data-v="90">Turn</button><button class="btn small" data-act="duplicate">Duplicate</button><button class="btn small danger" data-act="delete">Delete</button></div>`;
 }
 
 function openingInspector(opening) {
@@ -128,6 +168,7 @@ export function renderInspector() {
   if (selection && selected) {
     if (selection.kind === 'item') html = itemInspector(selected);
     else if (selection.kind === 'opening') html = openingInspector(selected);
+    else if (selection.kind === 'frame') html = frameInspector(selected);
     else if (selection.kind === 'wall') html = wallInspector(findWall(selection.id));
     else if (selection.kind === 'corner') html = cornerInspector();
   }
@@ -154,6 +195,10 @@ function applyInspectorField(field, value, done) {
     else if (field === 'w' || field === 'd' || field === 'h') {
       const meters = parseLength(value, units());
       if (meters != null && meters > 0) item[field] = Math.max(field === 'h' ? 0.005 : 0.05, Math.min(12, meters));
+      fitSectional(item);
+    } else if (field === 'seat') {
+      const meters = parseLength(value, units());
+      if (meters != null && meters > 0) { item.seat = meters; fitSectional(item); }
     } else if (field === 'rot') {
       const degrees = parseFloat(value);
       if (!isNaN(degrees)) item.rot = ((degrees % 360) + 360) % 360;
@@ -168,6 +213,17 @@ function applyInspectorField(field, value, done) {
       else if (field === 'height' && meters > 0) opening.height = Math.min(meters, plan.room.wallHeight);
       else if (field === 'sill') opening.sill = Math.max(0, Math.min(meters, plan.room.wallHeight - 0.05));
       else if (field === 'pos') opening.pos = meters + opening.width / 2;
+      clampOpenings();
+    }
+  } else if (selection.kind === 'frame') {
+    const frame = selected;
+    const meters = parseLength(value, units());
+    const wall = findWall(frame.wall);
+    if (meters != null && wall) {
+      if (field === 'fw' && meters > 0) frame.w = Math.max(0.05, meters);
+      else if (field === 'fh' && meters > 0) frame.h = Math.max(0.05, meters);
+      else if (field === 'alt') frame.alt = meters;
+      else if (field === 'left') frame.pos = faceX(wall, meters + frame.w / 2);
       clampOpenings();
     }
   } else if (selection.kind === 'wall') {
@@ -208,6 +264,7 @@ function initInspector() {
     else if (action === 'delete') deleteSelection();
     else if (action === 'color' || action === 'paintWall') applyInspectorField(action, value, true);
     else if (action === 'unpaintWall') { delete app.plan.room.wallColors[app.selection.id]; commit(); }
+    else if (action === 'side') { const item = findSelected(); if (item) { item.side = value; commit(); } }
     else if (action === 'addOpening') addOpening(value);
   });
 }
@@ -245,7 +302,7 @@ function initRoomPanel() {
     if (target.id === 'floorMat') room.floor.material = target.value;
     if (target.id === 'ceil') {
       const meters = parseLength(target.value, units());
-      if (meters != null && meters >= 1.5 && meters <= 8) room.wallHeight = meters;
+      if (meters != null && meters >= 1.5 && meters <= 8) { room.wallHeight = meters; clampOpenings(); }
       target.value = length(room.wallHeight);
     }
     commit();
@@ -256,6 +313,227 @@ function initRoomPanel() {
     if (button.dataset.add) addItem(button.dataset.add);
     else if (button.id === 'clearItems') clearItems();
     else if (button.id === 'loadSample') loadSample();
+  });
+}
+
+/* ------------------------------------------------------------------ frames panel */
+
+/** Common frame sizes, outside dimensions: [width, height (metres), label]. */
+const FRAME_PRESETS = {
+  imperial: [[5, 7], [8, 10], [11, 14], [12, 12], [16, 20], [18, 24], [24, 36]].map(([w, h]) => [w * INCH, h * INCH, `${w}×${h}`]),
+  metric: [[13, 18], [20, 25], [30, 40], [30, 30], [40, 50], [50, 70], [60, 90]].map(([w, h]) => [w / 100, h / 100, `${w}×${h}`]),
+};
+/** The layouts on show, with where each would put the frames: [{ layout, placed: [{ id, x, alt }] }]. */
+let shownLayouts = [];
+
+/** The piece the frames should hang over, from the "Centre over" setting, or null for the middle of the wall. */
+function frameAnchor(wall, pieces = piecesAgainst(wall)) {
+  const { anchor } = app.frameOptions;
+  if (anchor === 'wall') return null;
+  const named = pieces.find(p => p.item.id === anchor);
+  if (named) return named;
+  // Automatic: the widest low piece (a sofa, console, bed or dresser, not a bookshelf).
+  return pieces.filter(p => p.top < 1.3 && p.right - p.left > 0.6)
+    .sort((a, b) => (b.right - b.left) - (a.right - a.left))[0] || null;
+}
+
+/** Size limits for suggested layouts on this wall. */
+function layoutLimits(wall, frames, anchor) {
+  const ceiling = app.plan.room.wallHeight;
+  const { gap, maxWidth } = app.frameOptions;
+  const widest = Math.max(...frames.map(f => f.w));
+  // About three quarters of the furniture's width looks right; on a bare wall, keep to the middle stretch.
+  const automatic = anchor ? (anchor.right - anchor.left) * 0.75 : Math.min(wall.length * 0.6, 2.4);
+  const lowest = anchor ? anchor.top + 8 * INCH : 0.6;
+  return {
+    gap,
+    maxWidth: Math.min(wall.length - 0.1, Math.max(widest, maxWidth || automatic)),
+    maxHeight: Math.max(0.3, ceiling - 4 * INCH - lowest),
+    automatic,
+  };
+}
+
+/** Where a layout would hang each frame, in face coordinates: centred over the anchor (or the wall) at the chosen height. */
+function placeLayout(wall, layout, anchor) {
+  const ceiling = app.plan.room.wallHeight;
+  let x = anchor ? (anchor.left + anchor.right) / 2 : wall.length / 2;
+  x = Math.max(layout.width / 2, Math.min(wall.length - layout.width / 2, x));
+  let alt = app.frameOptions.centre;
+  if (anchor) alt = Math.max(alt, anchor.top + 8 * INCH + layout.height / 2); // keep 8 in clear of the furniture
+  alt = Math.max(layout.height / 2, Math.min(ceiling - 3 * INCH - layout.height / 2, alt));
+  return layout.spots.map(spot => ({ id: spot.id, x: x + spot.x, alt: alt + spot.y }));
+}
+
+/** A small picture of a layout on the wall, with the piece it hangs over. */
+function drawLayoutThumb(canvas, wall, placed, anchor) {
+  const ratio = Math.min(window.devicePixelRatio || 1, 2.5);
+  const W = canvas.clientWidth || 110, H = canvas.clientHeight || 72;
+  canvas.width = Math.round(W * ratio);
+  canvas.height = Math.round(H * ratio);
+  const c = canvas.getContext('2d');
+  c.setTransform(ratio, 0, 0, ratio, 0, 0);
+  c.fillStyle = wallColor(wall.id);
+  c.fillRect(0, 0, W, H);
+  const byId = new Map(framesOn(wall).map(f => [f.id, f]));
+  let minX = Infinity, maxX = -Infinity, minAlt = Infinity, maxAlt = -Infinity;
+  for (const p of placed) {
+    const f = byId.get(p.id);
+    minX = Math.min(minX, p.x - f.w / 2); maxX = Math.max(maxX, p.x + f.w / 2);
+    minAlt = Math.min(minAlt, p.alt - f.h / 2); maxAlt = Math.max(maxAlt, p.alt + f.h / 2);
+  }
+  if (anchor) { minX = Math.min(minX, anchor.left); maxX = Math.max(maxX, anchor.right); minAlt = 0; }
+  const scale = Math.min((W - 12) / (maxX - minX), (H - 12) / (maxAlt - minAlt));
+  const midX = (minX + maxX) / 2, midAlt = (minAlt + maxAlt) / 2;
+  const sx = x => W / 2 + (x - midX) * scale, sy = alt => H / 2 - (alt - midAlt) * scale;
+  if (anchor) {
+    c.globalAlpha = 0.75;
+    c.fillStyle = anchor.item.color;
+    c.fillRect(sx(anchor.left), sy(anchor.top), (anchor.right - anchor.left) * scale, anchor.top * scale);
+    c.globalAlpha = 1;
+  }
+  for (const p of placed) {
+    const f = byId.get(p.id);
+    const { moulding, mat } = frameBorders(f.w, f.h);
+    const x = sx(p.x - f.w / 2), y = sy(p.alt + f.h / 2), w = f.w * scale, h = f.h * scale;
+    const m = Math.max(1, moulding * scale), inner = Math.max(m + 1, (moulding + mat) * scale);
+    c.fillStyle = '#2e2c2b'; c.fillRect(x, y, w, h);
+    c.fillStyle = '#f6f4ee'; c.fillRect(x + m, y + m, w - 2 * m, h - 2 * m);
+    if (w > 2 * inner && h > 2 * inner) { c.fillStyle = artColor(f.id); c.fillRect(x + inner, y + inner, w - 2 * inner, h - 2 * inner); }
+  }
+}
+
+function renderFramesPanel() {
+  const panel = $('#p-frames');
+  if ($('#app').dataset.tab !== 'frames') return;
+  const focusedId = document.activeElement && panel.contains(document.activeElement) ? document.activeElement.id : null;
+  const typed = { w: $('#frNewW') ? $('#frNewW').value : '', h: $('#frNewH') ? $('#frNewH').value : '' };
+  const wall = frameWall();
+  const frames = framesOn(wall);
+  const options = app.frameOptions;
+  const pieces = piecesAgainst(wall);
+  const anchor = frameAnchor(wall, pieces);
+  const chosenId = app.selection && app.selection.kind === 'frame' ? app.selection.id : null;
+  const problems = frameProblems();
+  const limits = frames.length ? layoutLimits(wall, frames, anchor) : null;
+  shownLayouts = limits
+    ? suggestLayouts(frames, limits).map(layout => ({ layout, placed: placeLayout(wall, layout, anchor) }))
+    : [];
+
+  const wallOptions = getWalls().map(w => {
+    const count = app.plan.frames.filter(f => f.wall === w.id).length;
+    return `<option value="${escapeHtml(w.id)}"${w.id === wall.id ? ' selected' : ''}>Wall ${w.index + 1} · ${length(w.length)}${count ? ` · ${count} frame${count > 1 ? 's' : ''}` : ''}</option>`;
+  }).join('');
+  const rows = frames.map(f => {
+    const id = escapeHtml(f.id);
+    return `<li data-frame="${id}"${f.id === chosenId ? ' aria-current="true"' : ''}>
+      <span class="art" style="background:${artColor(f.id)}"${problems[f.id] ? ' data-warn="true" title="' + FRAME_PROBLEMS[problems[f.id]] + '"' : ''}></span>
+      <input class="field" id="fr-w-${id}" data-fr="w" value="${length(f.w)}" aria-label="Width">
+      <span class="x">×</span>
+      <input class="field" id="fr-h-${id}" data-fr="h" value="${length(f.h)}" aria-label="Height">
+      <button class="btn small icon" data-fract="turn" title="Turn" aria-label="Turn">&#8635;</button>
+      <button class="btn small icon danger" data-fract="remove" title="Remove" aria-label="Remove">&times;</button></li>`;
+  }).join('');
+  const anchorOptions = pieces.map(p =>
+    `<option value="${escapeHtml(p.item.id)}"${options.anchor === p.item.id ? ' selected' : ''}>${escapeHtml(p.item.name)}</option>`).join('');
+  const automaticName = (() => {
+    const saved = options.anchor; options.anchor = 'auto';
+    const pick = frameAnchor(wall, pieces); options.anchor = saved;
+    return pick ? ` (${escapeHtml(pick.item.name)})` : ' (middle of the wall)';
+  })();
+
+  panel.innerHTML = `
+    <div class="grp"><h3>Wall</h3>
+      <div class="row"><label for="frWall">Hang on</label><select class="field" id="frWall">${wallOptions}</select></div>
+      <p class="note">The sheet shows this wall face on. Drag frames there to move them.</p></div>
+    <div class="grp"><h3>Frames on this wall</h3>
+      ${frames.length ? `<ul class="frlist">${rows}</ul>` : '<p class="note">No frames yet. Add some below.</p>'}
+      <p class="lbl">Add a frame</p>
+      <div class="btns">${FRAME_PRESETS[units()].map(([w, h, name]) => `<button class="btn small" data-frpreset="${w},${h}">${name}</button>`).join('')}</div>
+      <div class="frnew"><input class="field" id="frNewW" placeholder="Width" aria-label="New frame width" value="${escapeHtml(typed.w)}">
+        <span class="x">×</span><input class="field" id="frNewH" placeholder="Height" aria-label="New frame height" value="${escapeHtml(typed.h)}">
+        <button class="btn small" id="frAdd">Add</button></div>
+      <p class="note">Sizes are the outside of the frame, width × height. Plain numbers are ${units() === 'metric' ? 'centimetres' : 'inches'}.</p></div>
+    <div class="grp"><h3>Layout</h3>
+      <div class="row"><label for="frAnchor">Centre over</label><select class="field" id="frAnchor">
+        <option value="auto"${options.anchor === 'auto' || !pieces.some(p => p.item.id === options.anchor) && options.anchor !== 'wall' ? ' selected' : ''}>Automatic${automaticName}</option>
+        <option value="wall"${options.anchor === 'wall' ? ' selected' : ''}>Middle of the wall</option>${anchorOptions}</select></div>
+      <div class="row"><label for="frCentre">Centre at</label><input class="field" id="frCentre" value="${length(options.centre)}"></div>
+      <div class="row"><label for="frGap">Gap</label><input class="field" id="frGap" value="${length(options.gap)}"></div>
+      <div class="row"><label for="frMax">Max width</label><input class="field" id="frMax" value="${options.maxWidth ? length(options.maxWidth) : ''}" placeholder="Auto (${limits ? length(Math.min(limits.automatic, wall.length)) : 'fits the space'})"></div>
+      ${shownLayouts.length ? `<div class="layouts">${shownLayouts.map(({ layout }, i) =>
+        `<button class="layout" data-layout="${i}"><canvas aria-hidden="true"></canvas><span>${layout.name}</span></button>`).join('')}</div>
+      <p class="note">Pick a layout to hang the frames that way, then drag them on the wall to fine-tune. Gallery height is about 57" to the centre; over furniture the group stays at least 8" above it.</p>`
+      : '<p class="note">Add frames to see suggested layouts.</p>'}</div>`;
+
+  panel.querySelectorAll('.layout canvas').forEach((canvas, i) => drawLayoutThumb(canvas, wall, shownLayouts[i].placed, anchor));
+  const field = focusedId && document.getElementById(focusedId);
+  if (field) field.focus();
+}
+
+function initFramesPanel() {
+  const panel = $('#p-frames');
+  const addTyped = () => {
+    const w = parseLength($('#frNewW').value, units()), h = parseLength($('#frNewH').value, units());
+    if (!(w > 0) || !(h > 0)) { $('#frNewW').focus(); return; }
+    $('#frNewW').value = $('#frNewH').value = '';
+    addFrame(frameWall().id, Math.max(0.05, w), Math.max(0.05, h));
+  };
+  panel.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    const row = event.target.closest('[data-frame]');
+    const frame = row && app.plan.frames.find(f => f.id === row.dataset.frame);
+    if (button && button.dataset.frpreset) {
+      const [w, h] = button.dataset.frpreset.split(',').map(Number);
+      addFrame(frameWall().id, w, h);
+    } else if (button && button.id === 'frAdd') {
+      addTyped();
+    } else if (button && button.dataset.layout) {
+      const wall = frameWall();
+      const shown = shownLayouts[+button.dataset.layout];
+      if (!shown) return;
+      for (const spot of shown.placed) {
+        const f = app.plan.frames.find(x => x.id === spot.id);
+        if (f) { f.pos = faceX(wall, spot.x); f.alt = spot.alt; }
+      }
+      clampOpenings();
+      commit();
+    } else if (button && frame && button.dataset.fract === 'turn') {
+      [frame.w, frame.h] = [frame.h, frame.w];
+      clampOpenings();
+      commit();
+    } else if (button && frame && button.dataset.fract === 'remove') {
+      app.plan.frames = app.plan.frames.filter(f => f !== frame);
+      if (app.selection && app.selection.id === frame.id) app.selection = null;
+      commit();
+    } else if (frame && !event.target.closest('input')) {
+      setSelection({ kind: 'frame', id: frame.id });
+    }
+  });
+  panel.addEventListener('focusin', event => { // focusing a frame's size field selects that frame
+    const row = event.target.closest('[data-frame]');
+    if (row && event.target.dataset.fr) setSelection({ kind: 'frame', id: row.dataset.frame });
+  });
+  panel.addEventListener('change', event => {
+    const target = event.target;
+    const options = app.frameOptions;
+    if (target.id === 'frWall') { app.frameWall = target.value; setSelection({ kind: 'wall', id: target.value }); return; }
+    if (target.id === 'frAnchor') options.anchor = target.value;
+    else if (target.id === 'frCentre' || target.id === 'frGap' || target.id === 'frMax') {
+      const meters = target.value.trim() ? parseLength(target.value, units()) : null;
+      if (target.id === 'frCentre' && meters > 0) options.centre = meters;
+      if (target.id === 'frGap' && meters != null) options.gap = Math.min(0.5, meters);
+      if (target.id === 'frMax') options.maxWidth = meters > 0 ? meters : null;
+    } else if (target.dataset.fr) {
+      const frame = app.plan.frames.find(f => f.id === target.closest('[data-frame]').dataset.frame);
+      const meters = parseLength(target.value, units());
+      if (frame && meters > 0) { frame[target.dataset.fr] = Math.max(0.05, meters); clampOpenings(); commit(); }
+    }
+    app.dirty.panels = true;
+  });
+  panel.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.target.tagName !== 'INPUT') return;
+    if (event.target.id === 'frNewW' || event.target.id === 'frNewH') addTyped();
+    else event.target.blur();
   });
 }
 
@@ -346,7 +624,12 @@ function initSavedPanel() {
 function renderHint() {
   const hint = $('#hint');
   const traced = app.draft.points.length;
-  if (app.tool === 'select') {
+  if (app.sheetView === 'wall') {
+    const wall = frameWall();
+    hint.innerHTML = '<button class="btn small" id="wallPrev" aria-label="Previous wall">&lsaquo;</button>' +
+      `<span>Wall ${wall.index + 1} of ${app.plan.room.verts.length}${app.view.width < 560 ? '' : ', face on. Drag frames to move them; arrows nudge, R turns.'}</span>` +
+      '<button class="btn small" id="wallNext" aria-label="Next wall">&rsaquo;</button>';
+  } else if (app.tool === 'select') {
     hint.innerHTML = '<span>Drag a piece to move it, drag its handle to turn it. Click a wall to paint or measure it.</span>';
   } else if (app.tool === 'walls') {
     hint.innerHTML = '<span>Drag a corner to reshape the room. Click + on a wall to add a corner.</span>';
@@ -366,7 +649,10 @@ let view3d = null;
 async function setView(view) {
   const sheet = $('#sheet');
   sheet.dataset.view = view;
+  app.sheetView = view;
+  app.dirty.panels = true;
   document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', button.dataset.view === view));
+  if (view === 'wall' && $('#app').dataset.tab !== 'frames') setTab('frames');
   if (view !== '3d') { if (view3d) view3d.hide(); requestDraw(); return; }
   if (!view3d) {
     $('#hint3d').innerHTML = '<span>Loading the 3D view…</span>';
@@ -397,6 +683,7 @@ export function renderPanels() {
   $('#readout').textContent = `${formatArea(Math.abs(polygonArea(plan.room.verts)), units())} · ${plan.items.length} pieces`;
   renderHint();
   renderLibrary();
+  renderFramesPanel();
 }
 
 function initBar() {
@@ -413,6 +700,13 @@ function initBar() {
   $('#hint').addEventListener('click', event => {
     if (event.target.id === 'drawDone') finishDrawing();
     if (event.target.id === 'drawCancel') setTool('select');
+    if (event.target.id === 'wallPrev' || event.target.id === 'wallNext') {
+      const walls = getWalls();
+      const step = event.target.id === 'wallNext' ? 1 : -1;
+      const next = walls[(frameWall().index + step + walls.length) % walls.length];
+      app.frameWall = next.id;
+      setSelection({ kind: 'wall', id: next.id });
+    }
   });
   $('#fit').addEventListener('click', fitView);
   $('#planName').addEventListener('change', event => { app.plan.name = event.target.value.trim() || 'Untitled room'; commit(); });
@@ -428,5 +722,6 @@ export function initPanels() {
   initBar();
   initInspector();
   initRoomPanel();
+  initFramesPanel();
   initSavedPanel();
 }

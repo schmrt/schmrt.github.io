@@ -5,13 +5,15 @@
 import { INCH } from './units.js';
 
 /**
- * Each entry: [type, display name, kind, [width, depth, height] in inches, default material, default colour].
+ * Each entry: [type, display name, kind, [width, depth, height] in inches, default material, default colour, extra].
  * `type` is what gets stored on a placed item. `kind` picks the plan symbol and behaviour,
  * so several types can share one kind (a sofa and an armchair are both kind "sofa").
+ * `extra` (optional) holds more fields copied onto each new item, e.g. a sectional's seat depth.
  */
 const CATALOG_SOURCE = [
   ['Seating', [
     ['sofa', 'Sofa', 'sofa', [84, 36, 32], 'fabric', '#3f5d73'],
+    ['sectional', 'Sectional', 'lsofa', [112, 84, 32], 'fabric', '#3f5d73', { seat: 38 * INCH, side: 'right' }],
     ['armchair', 'Armchair', 'sofa', [34, 34, 32], 'leather', '#a86b3c'],
     ['chair', 'Dining chair', 'chair', [18, 20, 34], 'wood', '#2e2c2b'],
     ['office', 'Office chair', 'office', [25, 25, 38], 'fabric', '#4b4f55'],
@@ -49,8 +51,8 @@ const CATALOG_SOURCE = [
 /** Catalog grouped for the Furnish panel: [{ group, items: [def, ...] }]. Sizes are in metres. */
 export const CATALOG = CATALOG_SOURCE.map(([group, entries]) => ({
   group,
-  items: entries.map(([type, name, kind, size, material, color]) => ({
-    type, name, kind, material, color,
+  items: entries.map(([type, name, kind, size, material, color, extra]) => ({
+    type, name, kind, material, color, extra: extra || null,
     width: size[0] * INCH, depth: size[1] * INCH, height: size[2] * INCH,
   })),
 }));

@@ -8,6 +8,7 @@ import {
   deleteSelection, duplicateSelection, rotateSelection,
 } from './state.js';
 import { setTab } from './panels.js';
+import { wallPointerDown, wallPointerMove, wallPointerUp, nudgeFrame } from './wallview.js';
 
 let canvas;
 /** Active pointers by id, as canvas positions. Two pointers means a pinch. */
@@ -119,6 +120,7 @@ function snapTracePoint(point) {
 function onPointerDown(event) {
   canvas.setPointerCapture(event.pointerId);
   const screen = canvasPoint(event);
+  if (app.sheetView === 'wall') { if (event.button === 0) wallPointerDown(event, screen); return; }
   pointers.set(event.pointerId, screen);
 
   if (pointers.size === 2) { // second finger down: switch to pinch zoom
@@ -184,6 +186,7 @@ function onPointerDown(event) {
 
 function onPointerMove(event) {
   const screen = canvasPoint(event);
+  if (app.sheetView === 'wall') { wallPointerMove(event, screen); return; }
   if (pointers.has(event.pointerId)) pointers.set(event.pointerId, screen);
   const point = toWorld(screen.x, screen.y);
   const { view, plan } = app;
@@ -250,6 +253,7 @@ function onPointerMove(event) {
 
 function onPointerUp(event) {
   const screen = canvasPoint(event);
+  if (app.sheetView === 'wall') { wallPointerUp(event); return; }
   pointers.delete(event.pointerId);
   if (!gesture) return;
   const finished = gesture;
@@ -277,6 +281,7 @@ function onPointerUp(event) {
 
 function onWheel(event) {
   event.preventDefault();
+  if (app.sheetView === 'wall') return; // the wall view always fits the wall
   const { view } = app;
   const screen = canvasPoint(event);
   const anchor = toWorld(screen.x, screen.y);
@@ -306,6 +311,11 @@ function onKeyDown(event) {
   if (modifier && key === 'd') { event.preventDefault(); duplicateSelection(); return; }
   if (key === 'r' && !modifier) { rotateSelection(event.shiftKey ? 15 : 90); return; }
 
+  if (key.startsWith('arrow') && app.selection && app.selection.kind === 'frame') {
+    event.preventDefault();
+    nudgeFrame(key, event.shiftKey);
+    return;
+  }
   if (key.startsWith('arrow') && app.selection && app.selection.kind === 'item') {
     const item = findSelected();
     if (!item) return;

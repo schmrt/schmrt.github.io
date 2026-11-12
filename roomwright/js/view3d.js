@@ -12,6 +12,7 @@ import { WALL_THICKNESS as T, pointInPolygon, distanceToSegment, pointInItem } f
 import { ITEM_DEFS, isFlat, isSurface, isTabletop } from './catalog.js';
 import { app, getWalls, wallColor, setSelection } from './state.js';
 import { setTab } from './panels.js';
+import { artColor, frameBorders } from './frames.js';
 
 const EYE_HEIGHT = 1.6;      // walking camera height, metres
 const WALK_SPEED = 1.3;      // metres per second; Shift doubles it
@@ -250,6 +251,46 @@ const BUILDERS = {
       block(g, each - 0.012, Math.max(0.05, h - seat - 0.05), 0.13, m, x, seat, -d / 2 + back + 0.065);
     }
   },
+  // An L-shaped sectional: the main run along the back (-z) and a return running forward on one
+  // side (+x for side 'right'). Backs run along the rear and the return's outer side; the main run's
+  // free end has an arm; the return ends open, like a chaise.
+  lsofa(g, item, m) {
+    const { w, d, h } = item;
+    const s = Math.min(item.seat || d * 0.45, w, d), k = item.side === 'left' ? -1 : 1;
+    const leg = 0.08, seat = Math.min(0.46, h * 0.6), back = Math.min(0.24, s * 0.3);
+    const arm = Math.min(0.2, w * 0.1), armHeight = Math.min(h, seat + 0.18), cushion = 0.12;
+    const legs = finish(DARK_WOOD, 'wood');
+    const inset = 0.07;
+    for (const [x, z] of [[-w / 2 + inset, -d / 2 + inset], [w / 2 - inset, -d / 2 + inset], [w / 2 - inset, d / 2 - inset],
+      [w / 2 - s + inset, d / 2 - inset], [-w / 2 + inset, -d / 2 + s - inset]]) post(g, 0.022, leg, legs, k * x, 0, z);
+    const baseH = seat - leg - cushion;
+    block(g, w, baseH, s, m, 0, leg, -d / 2 + s / 2);                    // main run
+    block(g, s, baseH, d - s, m, k * (w / 2 - s / 2), leg, s / 2);        // return
+    block(g, w, h - leg, back, m, 0, leg, -d / 2 + back / 2);            // back of the main run
+    block(g, back, h - leg, d - back, m, k * (w / 2 - back / 2), leg, back / 2); // back of the return
+    block(g, arm, armHeight - leg, s, m, -k * (w / 2 - arm / 2), leg, -d / 2 + s / 2);
+    // Cushions: seats and back cushions along the main run, the corner, then down the return.
+    const backH = Math.max(0.05, h - seat - 0.05), runDepth = s - back - 0.01;
+    const mainZ = -d / 2 + (back + s) / 2, returnX = w / 2 - (s + back) / 2;
+    const split = (from, to) => {
+      const n = Math.max(1, Math.round((to - from) / 0.75)), each = (to - from) / n;
+      return Array.from({ length: n }, (_, i) => [from + each * (i + 0.5), each - 0.012]);
+    };
+    if (w - s - arm > 0.15) {
+      for (const [x, each] of split(-w / 2 + arm, w / 2 - s)) {
+        block(g, each, cushion, runDepth, m, k * x, seat - cushion, mainZ);
+        block(g, each, backH, 0.13, m, k * x, seat, -d / 2 + back + 0.065);
+      }
+    }
+    block(g, runDepth, cushion, runDepth, m, k * returnX, seat - cushion, mainZ);
+    block(g, runDepth, backH, 0.13, m, k * returnX, seat, -d / 2 + back + 0.065);
+    if (d - s > 0.15) {
+      for (const [z, each] of split(-d / 2 + s, d / 2)) {
+        block(g, runDepth, cushion, each, m, k * returnX, seat - cushion, z);
+        block(g, 0.13, backH, each, m, k * (w / 2 - back - 0.065), seat, z);
+      }
+    }
+  },
   chair(g, { w, d, h }, m) {
     const seat = Math.min(0.46, h * 0.56), thick = 0.035, leg = 0.032;
     for (const sx of [-1, 1]) {
@@ -465,8 +506,8 @@ function floorShape(corners, flipY) {
   return shape;
 }
 
-/** One wall, with holes for windows and doors, and its trim, frames and outlets. */
-function buildWall(wall, height, openings) {
+/** One wall, with holes for windows and doors, its trim, outlets and picture frames. */
+function buildWall(wall, height, openings, frames = []) {
   const s = wall.inwardSign; // the room side of the wall is local +z when s = 1, -z when s = -1
   const L = wall.length;
   const group = selectableGroup('wall', wall.id, { w: L, h: height, d: T, x: L / 2, y: height / 2, z: -s * T / 2 });
@@ -541,6 +582,21 @@ function buildWall(wall, height, openings) {
     const slot = finish('#3a3a3a', 'painted');
     for (const dy of [0.03, 0.07]) for (const dx of [-0.007, 0.007]) block(og, 0.004, 0.012, 0.002, slot, o.pos + dx, o.sill + dy, s * 0.009);
   }
+
+  // Picture frames: a moulding, a mat, and a block of colour standing in for the picture.
+  const depth = 0.025;
+  const moulding3d = finish('#2e2c2b', 'wood'), mat3d = finish('#f6f4ee', 'painted');
+  for (const f of frames) {
+    const fg = selectableGroup('frame', f.id, { w: f.w, h: f.h, d: depth, x: f.pos, y: f.alt, z: s * depth / 2 });
+    group.add(fg);
+    const { moulding, mat } = frameBorders(f.w, f.h), bottom = f.alt - f.h / 2;
+    block(fg, f.w, f.h, depth, moulding3d, f.pos, bottom, s * depth / 2);
+    block(fg, f.w - 2 * moulding, f.h - 2 * moulding, 0.004, mat3d, f.pos, bottom + moulding, s * (depth + 0.001));
+    const inset = moulding + mat;
+    if (f.w > 2 * inset && f.h > 2 * inset) {
+      block(fg, f.w - 2 * inset, f.h - 2 * inset, 0.004, finish(artColor(f.id), 'painted'), f.pos, bottom + inset, s * (depth + 0.002));
+    }
+  }
   return group;
 }
 
@@ -593,7 +649,7 @@ function rebuild() {
   // Walls.
   const walls = getWalls();
   walls.forEach((wall, i) => {
-    const group = buildWall(wall, height, plan.openings.filter(o => o.wall === wall.id));
+    const group = buildWall(wall, height, plan.openings.filter(o => o.wall === wall.id), plan.frames.filter(f => f.wall === wall.id));
     roomGroup.add(group);
     wallParts.push({ group, wall });
     const fill = buildCornerFill(walls[(i - 1 + walls.length) % walls.length], wall, height);
