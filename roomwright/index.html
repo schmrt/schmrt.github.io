@@ -37,12 +37,12 @@
       <div class="stage3d" id="stage3d" aria-label="3D view of the room" hidden></div>
       <div class="tools">
         <div class="seg" role="group" aria-label="View">
-          <button data-view="plan" aria-pressed="true">Plan</button><button data-view="3d" aria-pressed="false">3D</button>
+          <button data-view="plan" aria-pressed="true">Plan</button><button data-view="wall" aria-pressed="false">Wall</button><button data-view="3d" aria-pressed="false">3D</button>
         </div>
-        <div class="seg only2d" role="group" aria-label="Tool">
+        <div class="seg onlyplan" role="group" aria-label="Tool">
           <button data-tool="select" aria-pressed="true">Arrange</button><button data-tool="walls" aria-pressed="false">Edit walls</button><button data-tool="draw" aria-pressed="false">Draw room</button>
         </div>
-        <button class="btn only2d" id="fit">Fit</button>
+        <button class="btn onlyplan" id="fit">Fit</button>
         <div class="seg only3d" role="group" aria-label="Camera">
           <button data-cam="orbit" aria-pressed="true">Orbit</button><button data-cam="walk" aria-pressed="false">Walk</button>
         </div>
@@ -62,6 +62,7 @@
       <div class="tabs" role="tablist">
         <button role="tab" data-tab="room" aria-selected="true">Room</button>
         <button role="tab" data-tab="furnish" aria-selected="false">Furnish</button>
+        <button role="tab" data-tab="frames" aria-selected="false">Frames</button>
         <button role="tab" data-tab="saved" aria-selected="false">Saved</button>
         <button role="tab" data-tab="selected" aria-selected="false" class="m-only">Selected</button>
       </div>
@@ -99,6 +100,7 @@
         </div>
       </div>
       <div class="panel" id="p-furnish"></div>
+      <div class="panel" id="p-frames"></div>
       <div class="panel" id="p-saved">
         <div class="grp">
           <h3>Saved designs</h3>

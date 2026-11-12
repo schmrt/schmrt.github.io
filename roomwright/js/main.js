@@ -2,6 +2,7 @@
 
 import { app, initPlan, loadLibrary } from './state.js';
 import { initCanvas, draw } from './draw.js';
+import { drawWallView } from './wallview.js';
 import { initInput } from './input.js';
 import { initPanels, renderPanels, renderInspector } from './panels.js';
 
@@ -21,7 +22,7 @@ function frame() {
   if (dirty.inspector) { dirty.inspector = false; renderInspector(); }
   if (dirty.draw && app.view.width > 1) {
     dirty.draw = false;
-    try { draw(); } catch (error) { console.error(error); }
+    try { if (app.sheetView === 'wall') drawWallView(); else draw(); } catch (error) { console.error(error); }
   }
   requestAnimationFrame(frame);
 }

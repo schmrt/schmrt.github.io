@@ -10,7 +10,10 @@ let canvas, ctx, sheet;
 let pixelRatio = 1;
 let hasFitted = false;
 /** Theme colours read from the CSS custom properties in styles.css. */
-const colors = {};
+export const colors = {};
+
+/** The sheet's drawing context and pixel ratio, for the wall view (wallview.js), which draws on the same canvas. */
+export const sheetContext = () => ({ ctx, pixelRatio });
 
 export function initCanvas(canvasElement, sheetElement) {
   canvas = canvasElement;
@@ -157,7 +160,7 @@ PATTERNS.weave = PATTERNS.fabric;
 
 const patternCache = {};
 /** A canvas pattern for a material, scaled to real-world size, or null if the material is plain. */
-function patternFor(material) {
+export function patternFor(material) {
   if (material in patternCache) return patternCache[material];
   const entry = PATTERNS[material];
   if (!entry) return (patternCache[material] = null);
@@ -172,7 +175,7 @@ function patternFor(material) {
 }
 
 /** Lighten (amount > 0) or darken (amount < 0) a hex colour. amount is -1..1. */
-function shade(hex, amount) {
+export function shade(hex, amount) {
   const value = parseInt(hex.slice(1), 16);
   const target = amount < 0 ? 0 : 255;
   const k = Math.abs(amount);
@@ -182,7 +185,7 @@ function shade(hex, amount) {
 
 /* ------------------------------------------------------------------ path helpers */
 
-function roundedRect(c, x, y, w, h, radius) {
+export function roundedRect(c, x, y, w, h, radius) {
   const r = Math.max(0, Math.min(radius, w / 2, h / 2));
   c.beginPath();
   c.moveTo(x + r, y);
@@ -197,13 +200,31 @@ function ellipse(c, x, y, radiusX, radiusY) {
   c.ellipse(x, y, Math.max(0.001, radiusX), Math.max(0.001, radiusY), 0, 0, Math.PI * 2);
 }
 /** Stroke one or more separate line segments: lines(c, x1, y1, x2, y2, x1, y1, x2, y2, ...). */
-function lines(c, ...coords) {
+export function lines(c, ...coords) {
   c.beginPath();
   for (let i = 0; i < coords.length; i += 4) { c.moveTo(coords[i], coords[i + 1]); c.lineTo(coords[i + 2], coords[i + 3]); }
   c.stroke();
 }
+/** Start a closed path through [x, y] points, mirrored across x = 0 when `k` is -1. */
+function polygonPath(c, points, k = 1) {
+  c.beginPath();
+  points.forEach(([x, y], i) => (i ? c.lineTo(k * x, y) : c.moveTo(k * x, y)));
+  c.closePath();
+}
+
+/** The corners of a sectional's L, in its own coordinates, with the return on the right (+x). */
+function sectionalOutline(w, d, s) {
+  return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [w / 2 - s, d / 2], [w / 2 - s, -d / 2 + s], [-w / 2, -d / 2 + s]];
+}
+
+/** Trace an item's outline in its own coordinates: a rectangle, or an L for a sectional. */
+function footprintPath(c, item) {
+  if (!(item.seat > 0)) { c.beginPath(); c.rect(-item.w / 2, -item.d / 2, item.w, item.d); return; }
+  polygonPath(c, sectionalOutline(item.w, item.d, Math.min(item.seat, item.w, item.d)), item.side === 'left' ? -1 : 1);
+}
+
 /** Fill the current path with the fill colour, lay the material pattern over it, then outline it. */
-function fillAndStroke(c, pattern) {
+export function fillAndStroke(c, pattern) {
   c.fill();
   if (pattern) { const colour = c.fillStyle; c.fillStyle = pattern; c.fill(); c.fillStyle = colour; }
   c.stroke();
@@ -227,6 +248,25 @@ const SYMBOLS = {
       const x = -w / 2 + arm + ((w - 2 * arm) * i) / cushions;
       lines(c, x, -d / 2 + back, x, d / 2 - 0.02);
     }
+  },
+  // An L-shaped sectional: a back along the rear and down the outer side of the return,
+  // an arm on the free end of the main run, and seat cushions. The return has no arm (a chaise end).
+  lsofa(c, w, d, pattern, item) {
+    const s = Math.min(item.seat || d * 0.45, w, d), k = item.side === 'left' ? -1 : 1;
+    const back = Math.min(0.22, s * 0.27), arm = Math.min(0.17, w * 0.1);
+    polygonPath(c, sectionalOutline(w, d, s), k); fillAndStroke(c, pattern);
+    const innerX = w / 2 - s + 0.02, frontY = -d / 2 + s - 0.02, outerX = w / 2 - back, top = -d / 2 + back, end = d / 2 - 0.02;
+    const base = c.fillStyle;
+    c.fillStyle = shade(item.color, 0.14);
+    polygonPath(c, [[-w / 2 + arm, top], [outerX, top], [outerX, end], [innerX, end], [innerX, frontY], [-w / 2 + arm, frontY]], k);
+    fillAndStroke(c, pattern);
+    c.fillStyle = base;
+    // Seams: around the corner seat, then between cushions along the main run and down the return.
+    lines(c, k * innerX, top, k * innerX, frontY, k * innerX, frontY, k * outerX, frontY);
+    const mainRun = innerX - (-w / 2 + arm), mainCount = Math.max(1, Math.round(mainRun / 0.75));
+    for (let i = 1; i < mainCount; i++) { const x = -w / 2 + arm + (mainRun * i) / mainCount; lines(c, k * x, top, k * x, frontY); }
+    const returnRun = end - frontY, returnCount = Math.max(1, Math.round(returnRun / 0.75));
+    for (let i = 1; i < returnCount; i++) { const y = frontY + (returnRun * i) / returnCount; lines(c, k * innerX, y, k * outerX, y); }
   },
   chair(c, w, d, pattern, item) {
     roundedRect(c, -w / 2, -d / 2 + d * 0.1, w, d * 0.9, 0.05); fillAndStroke(c, pattern);
@@ -383,7 +423,7 @@ export function drawCatalogTiles() {
     const ratio = Math.min(window.devicePixelRatio || 1, 2.5);
     tile.width = 60 * ratio;
     tile.height = 42 * ratio;
-    const item = { type: def.type, w: def.width, d: def.depth, color: def.color, material: def.material };
+    const item = { ...(def.extra || {}), type: def.type, w: def.width, d: def.depth, color: def.color, material: def.material };
     const scale = Math.min(52 / (item.w * 1.12), 34 / (item.d * 1.12), 60);
     c.setTransform(ratio, 0, 0, ratio, 0, 0);
     c.clearRect(0, 0, 60, 42);
@@ -532,7 +572,7 @@ export function draw() {
       ctx.strokeStyle = colors.warn;
       ctx.lineWidth = 2.2 * px;
       ctx.setLineDash([6 * px, 4 * px]);
-      ctx.strokeRect(-item.w / 2, -item.d / 2, item.w, item.d);
+      footprintPath(ctx, item); ctx.stroke();
       ctx.setLineDash([]);
     }
     ctx.restore();
@@ -541,6 +581,20 @@ export function draw() {
   for (const opening of plan.openings) {
     const wall = walls.find(w => w.id === opening.wall);
     if (wall) drawOpening(opening, wall, px, !!selection && selection.kind === 'opening' && selection.id === opening.id);
+  }
+
+  // Picture frames: a thin bar on the inside face of their wall. Arrange them in the wall view.
+  for (const frame of plan.frames) {
+    const wall = walls.find(w => w.id === frame.wall);
+    if (!wall) continue;
+    const chosen = !!selection && selection.kind === 'frame' && selection.id === frame.id;
+    ctx.save();
+    ctx.translate(wall.a.x, wall.a.y);
+    ctx.rotate(Math.atan2(wall.uy, wall.ux));
+    const depth = Math.max(0.03, 3 * px) * wall.inwardSign;
+    ctx.fillStyle = chosen ? colors.accent : colors.ink;
+    ctx.fillRect(frame.pos - frame.w / 2, 0, frame.w, depth);
+    ctx.restore();
   }
 
   // Selected wall: highlight the wall band.
@@ -562,10 +616,9 @@ export function draw() {
     ctx.save();
     ctx.translate(item.x, item.y);
     ctx.rotate((item.rot * Math.PI) / 180);
-    ctx.strokeStyle = colors.ink; ctx.lineWidth = 4 * px;
-    ctx.strokeRect(-item.w / 2, -item.d / 2, item.w, item.d);
-    ctx.strokeStyle = colors.accent; ctx.lineWidth = 2 * px;
-    ctx.strokeRect(-item.w / 2, -item.d / 2, item.w, item.d);
+    footprintPath(ctx, item);
+    ctx.strokeStyle = colors.ink; ctx.lineWidth = 4 * px; ctx.stroke();
+    ctx.strokeStyle = colors.accent; ctx.lineWidth = 2 * px; ctx.stroke();
     const handleY = item.d / 2 + 24 * px;
     ctx.strokeStyle = colors.ink; ctx.lineWidth = 1.5 * px;
     lines(ctx, 0, item.d / 2, 0, handleY);

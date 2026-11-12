@@ -31,6 +31,8 @@ level of the repository (or in `/docs`) and turn on Pages.
 | `js/state.js` | The plan data, undo/redo, selection, view, all actions, storage, saved designs, export/import |
 | `js/view3d.js` | The 3D view: builds a three.js scene from the plan; orbit and walk cameras; click to select |
 | `js/draw.js` | Canvas drawing: grid, room, furniture symbols, material patterns, openings, dimensions |
+| `js/wallview.js` | The wall view: one wall face on, for hanging and dragging picture frames |
+| `js/frames.js` | Suggested picture-frame layouts (row, grid, salon...) and their scoring (pure functions) |
 | `js/input.js` | Mouse, touch and keyboard handling, hit testing, snapping |
 | `js/panels.js` | Top bar, Room / Furnish / Saved panels, the inspector |
 | `js/catalog.js` | Furniture catalog, materials, colour palettes, opening defaults, room templates |
@@ -47,6 +49,30 @@ level of the repository (or in `/docs`) and turn on Pages.
 - Walls are identified by the id of their starting corner. Openings store that id plus a distance
   along the wall.
 - An item's front faces +y in its own coordinates; `rot` is in degrees.
+
+## Sectionals
+
+The **Sectional** (Furnish, Seating) is an L-shaped sofa. Width and depth are its overall size;
+the inspector adds a **seat depth** (how deep each run is) and which side the **return** is on.
+Overlap checks, wall snapping and clicking all use the real L shape (`itemParts` in
+`geometry.js`), so a coffee table can sit in the corner of the L without a warning.
+
+## Picture frames
+
+The **Frames** tab switches the sheet to the **Wall** view: the chosen wall seen face on, with its
+windows, doors, outlets and any furniture standing against it.
+
+- Add frames from the size presets or by typing a width and height (outside size of the frame).
+- **Layout** suggests arrangements (a row, two rows on a centre line, grids, a feature frame with
+  columns either side, packed and salon-style rows), scored for compactness and shape. Click one
+  to hang the frames that way. The group is centred over the widest low piece against the wall
+  (or a piece you pick, or the middle of the wall), with its centre at about 57 in and at least
+  8 in above the furniture.
+- Drag frames in the wall view to fine-tune; they snap to each other's edges, centres and the gap,
+  and to the centre of the wall and the furniture. Arrow keys nudge, R turns a frame, Delete
+  removes it. Frames covering a window or door, overlapping, or hanging behind furniture are
+  outlined in red.
+- Frames show as thin bars on the plan and as framed pictures in 3D.
 
 ## The 3D view
 

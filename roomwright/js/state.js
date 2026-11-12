@@ -14,12 +14,17 @@
 //     openings: [{ id, type, wall, pos, width, height, sill }],
 //                             type: window | door | outlet; wall: starting corner id;
 //                             pos: distance from the wall's start to the opening's centre
-//     items: [{ id, type, name, x, y, rot, w, d, h, color, material }]
+//     items: [{ id, type, name, x, y, rot, w, d, h, color, material, seat?, side? }]
 //                             x, y: centre; rot: degrees; w, d, h: width, depth, height
+//                             seat, side: only on sectionals (see itemParts in geometry.js)
+//     frames: [{ id, wall, pos, alt, w, h }]
+//                             picture frames hung on a wall; wall: starting corner id;
+//                             pos: distance from the wall's start to the frame's centre;
+//                             alt: height of the frame's centre above the floor; w, h: outside size
 //   }
 
 import { INCH, FOOT } from './units.js';
-import { polygonArea, pointInPolygon, wallsOf, itemCorners, rectsOverlap, distance } from './geometry.js';
+import { polygonArea, pointInPolygon, wallsOf, footprintQuads, rectsOverlap, distance } from './geometry.js';
 import {
   ITEM_DEFS, OPENING_DEFAULTS, ROOM_TEMPLATES, MATERIALS, RUG_MATERIALS, FLOOR_MATERIALS,
   isFlat, isSurface, isTuckable, isTabletop,
@@ -31,10 +36,20 @@ const LIBRARY_KEY = 'roomwright.library.v1';
 /** Shared, mutable app state. Other modules read it freely and change it through the functions below. */
 export const app = {
   plan: null,
-  /** { kind: 'item' | 'opening' | 'wall' | 'corner', id } or null. A wall's id is its starting corner's id. */
+  /** { kind: 'item' | 'opening' | 'frame' | 'wall' | 'corner', id } or null. A wall's id is its starting corner's id. */
   selection: null,
   /** 'select' (arrange furniture), 'walls' (edit corners) or 'draw' (trace a new room). */
   tool: 'select',
+  /** What the sheet shows: 'plan', 'wall' (the frames wall, face on) or '3d'. */
+  sheetView: 'plan',
+  /** The wall the Frames tab and the wall view are working on (its starting corner id), or null. */
+  frameWall: null,
+  /**
+   * Settings for suggested frame layouts (Frames tab). gap: space between frames; centre: height of
+   * the group's centre; anchor: 'auto', 'wall' (middle of the wall) or the id of a piece to hang
+   * over; maxWidth: widest the group should be, or null to work it out.
+   */
+  frameOptions: { gap: 2 * INCH, centre: 57 * INCH, anchor: 'auto', maxWidth: null },
   /** Pan and zoom of the plan sheet. scale is pixels per metre; width and height are the canvas size in CSS pixels. */
   view: { scale: 60, offsetX: 0, offsetY: 0, width: 1, height: 1 },
   /** Transient drawing aids: the room being traced, the hover point and alignment guides. */
@@ -59,6 +74,7 @@ function makeItem(type, x, y, rot = 0, overrides = {}, plan = app.plan) {
   return {
     id: newId(plan), type, name: def.name, x, y, rot,
     w: def.width, d: def.depth, h: def.height, color: def.color, material: def.material,
+    ...(def.extra || {}),
     ...overrides,
   };
 }
@@ -77,7 +93,7 @@ function createSamplePlan() {
   const plan = {
     seq: 1, name: 'Sample living room', units: 'imperial',
     room: { verts: [], wallHeight: 8 * FOOT, wallColor: '#ece9e2', wallColors: {}, floor: { material: 'planks', color: '#c9a577' } },
-    openings: [], items: [],
+    openings: [], items: [], frames: [],
   };
   const corners = plan.room.verts = cornersFromTemplate('l', plan);
   plan.room.wallColors[corners[1].id] = '#9aa98f';
@@ -157,6 +173,7 @@ export function findSelected(selection = app.selection) {
   if (!selection) return null;
   if (selection.kind === 'item') return app.plan.items.find(item => item.id === selection.id);
   if (selection.kind === 'opening') return app.plan.openings.find(opening => opening.id === selection.id);
+  if (selection.kind === 'frame') return app.plan.frames.find(frame => frame.id === selection.id);
   return app.plan.room.verts.find(corner => corner.id === selection.id);
 }
 
@@ -177,9 +194,10 @@ export function itemsInDrawOrder() {
 export function findIssues() {
   const issues = {};
   const { items, room } = app.plan;
-  const corners = items.map(item => itemCorners(item, 0.012));
+  // Each item is a list of rectangles: one for most pieces, two for an L-shaped sectional.
+  const quads = items.map(item => footprintQuads(item, 0.012));
   items.forEach((item, i) => {
-    if (corners[i].some(corner => !pointInPolygon(corner, room.verts))) issues[item.id] = 'outside';
+    if (quads[i].some(quad => quad.some(corner => !pointInPolygon(corner, room.verts)))) issues[item.id] = 'outside';
   });
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
@@ -187,7 +205,7 @@ export function findIssues() {
       const kindA = ITEM_DEFS[a.type].kind, kindB = ITEM_DEFS[b.type].kind;
       if (isFlat(kindA) || isFlat(kindB) || isTabletop(a.type) || isTabletop(b.type)) continue;
       if ((isTuckable(kindA) && isSurface(kindB)) || (isTuckable(kindB) && isSurface(kindA))) continue;
-      if (rectsOverlap(corners[i], corners[j])) {
+      if (quads[i].some(a => quads[j].some(b => rectsOverlap(a, b)))) {
         issues[a.id] = issues[a.id] || 'overlap';
         issues[b.id] = issues[b.id] || 'overlap';
       }
@@ -229,7 +247,7 @@ export function fitView() {
 export function setSelection(selection) {
   if (JSON.stringify(selection) === JSON.stringify(app.selection)) return false;
   app.selection = selection;
-  app.dirty.inspector = app.dirty.draw = true;
+  app.dirty.inspector = app.dirty.draw = app.dirty.panels = true;
   return true;
 }
 
@@ -246,9 +264,13 @@ export function setTool(tool) {
 
 /* ------------------------------------------------------------------ keeping things valid */
 
-/** Keep every opening on an existing wall and within that wall's length. Call after the room shape changes. */
+/**
+ * Keep every opening and picture frame on an existing wall and within that wall's length
+ * (and frames below the ceiling). Call after the room shape or ceiling height changes.
+ */
 export function clampOpenings() {
   const walls = getWalls();
+  const ceiling = app.plan.room.wallHeight;
   app.plan.openings = app.plan.openings.filter(opening => {
     const wall = walls.find(w => w.id === opening.wall);
     if (!wall) return false;
@@ -256,6 +278,23 @@ export function clampOpenings() {
     opening.pos = Math.max(opening.width / 2, Math.min(wall.length - opening.width / 2, opening.pos));
     return true;
   });
+  app.plan.frames = app.plan.frames.filter(frame => {
+    const wall = walls.find(w => w.id === frame.wall);
+    if (!wall) return false;
+    frame.w = Math.min(frame.w, Math.max(0.05, wall.length - 0.02));
+    frame.h = Math.min(frame.h, ceiling - 0.02);
+    frame.pos = Math.max(frame.w / 2, Math.min(wall.length - frame.w / 2, frame.pos));
+    frame.alt = Math.max(frame.h / 2, Math.min(ceiling - frame.h / 2, frame.alt));
+    return true;
+  });
+}
+
+/** Keep a sectional's seat depth sensible for its overall size. Does nothing for other pieces. */
+export function fitSectional(item) {
+  if (!(item.seat > 0)) return;
+  const most = Math.min(item.w, item.d) - 0.1;
+  item.seat = most < 0.3 ? Math.min(item.w, item.d) / 2 : Math.max(0.3, Math.min(most, item.seat));
+  if (item.side !== 'left') item.side = 'right';
 }
 
 /** Snap a dragged item to the measuring grid (1 in or 1 cm), then pull it flush against any wall it is close to. */
@@ -267,7 +306,7 @@ export function snapItemToWalls(item) {
   for (const wall of getWalls()) {
     // Signed distance from the wall to the item's nearest corner (positive = inside the room).
     let gap = Infinity;
-    for (const corner of itemCorners(item)) {
+    for (const quad of footprintQuads(item)) for (const corner of quad) {
       gap = Math.min(gap, (corner.x - wall.a.x) * wall.nx + (corner.y - wall.a.y) * wall.ny);
     }
     const along = (item.x - wall.a.x) * wall.ux + (item.y - wall.a.y) * wall.uy;
@@ -326,6 +365,29 @@ export function addOpening(type) {
   commit();
 }
 
+/**
+ * Hang a picture frame (w × h, in metres) on a wall. It goes to the right of any frames already
+ * there (as you face the wall), level with them, or in the middle of the wall at 57 in.
+ */
+export function addFrame(wallId, w, h) {
+  const wall = findWall(wallId);
+  if (!wall) return;
+  const ceiling = app.plan.room.wallHeight;
+  const frame = { id: newId(), wall: wall.id, pos: wall.length / 2, alt: Math.min(57 * INCH, ceiling - h / 2 - 0.02), w, h };
+  const others = app.plan.frames.filter(f => f.wall === wall.id);
+  if (others.length) {
+    const s = wall.inwardSign; // facing the wall, "right" runs along the wall when s = 1
+    const edge = s > 0 ? Math.max(...others.map(f => f.pos + f.w / 2)) : Math.min(...others.map(f => f.pos - f.w / 2));
+    frame.pos = edge + s * (2 * INCH + w / 2);
+    const bottom = Math.min(...others.map(f => f.alt - f.h / 2)), top = Math.max(...others.map(f => f.alt + f.h / 2));
+    frame.alt = (bottom + top) / 2;
+  }
+  app.plan.frames.push(frame);
+  app.selection = { kind: 'frame', id: frame.id };
+  clampOpenings();
+  commit();
+}
+
 /** Delete the selected item, opening or corner. Walls can't be deleted directly; remove a corner instead. */
 export function deleteSelection() {
   const selection = app.selection;
@@ -335,14 +397,17 @@ export function deleteSelection() {
     plan.items = plan.items.filter(item => item.id !== selection.id);
   } else if (selection.kind === 'opening') {
     plan.openings = plan.openings.filter(opening => opening.id !== selection.id);
+  } else if (selection.kind === 'frame') {
+    plan.frames = plan.frames.filter(frame => frame.id !== selection.id);
   } else if (selection.kind === 'corner') {
     const corners = plan.room.verts;
     const index = corners.findIndex(c => c.id === selection.id);
     if (corners.length <= 3 || index < 0) return;
-    // The two walls meeting here merge into the previous wall, which inherits this wall's openings.
+    // The two walls meeting here merge into the previous wall, which inherits this wall's openings and frames.
     const previous = corners[(index - 1 + corners.length) % corners.length];
     const previousLength = distance(previous, corners[index]);
-    plan.openings.forEach(o => { if (o.wall === selection.id) { o.wall = previous.id; o.pos += previousLength; } });
+    plan.openings.concat(plan.frames).forEach(o => { if (o.wall === selection.id) { o.wall = previous.id; o.pos += previousLength; } });
+    if (app.frameWall === selection.id) app.frameWall = previous.id;
     delete plan.room.wallColors[selection.id];
     corners.splice(index, 1);
     clampOpenings();
@@ -354,6 +419,8 @@ export function deleteSelection() {
 }
 
 export function duplicateSelection() {
+  const frame = app.selection && app.selection.kind === 'frame' && findSelected();
+  if (frame) { addFrame(frame.wall, frame.w, frame.h); return; }
   const item = app.selection && app.selection.kind === 'item' && findSelected();
   if (!item) return;
   const copy = { ...item, id: newId(), x: item.x + 0.3, y: item.y + 0.3 };
@@ -362,17 +429,22 @@ export function duplicateSelection() {
   commit();
 }
 
+/** Turn the selected item, or switch the selected frame between portrait and landscape. */
 export function rotateSelection(degrees) {
+  const frame = app.selection && app.selection.kind === 'frame' && findSelected();
+  if (frame) { [frame.w, frame.h] = [frame.h, frame.w]; clampOpenings(); commit(); return; }
   const item = app.selection && app.selection.kind === 'item' && findSelected();
   if (!item) return;
   item.rot = (((item.rot + degrees) % 360) + 360) % 360;
   commit();
 }
 
-/** Replace the room outline. Windows, doors, outlets and per-wall paint belong to the old walls, so they go. */
+/** Replace the room outline. Windows, doors, outlets, frames and per-wall paint belong to the old walls, so they go. */
 function replaceRoomShape(corners) {
   app.plan.room.verts = corners;
   app.plan.openings = [];
+  app.plan.frames = [];
+  app.frameWall = null;
   app.plan.room.wallColors = {};
   app.selection = null;
   fitView();
@@ -397,7 +469,7 @@ export function finishDrawing() {
 export function splitWall(wall, along) {
   const { plan } = app;
   const corner = { id: newId(), x: wall.a.x + wall.ux * along, y: wall.a.y + wall.uy * along };
-  plan.openings.forEach(o => { if (o.wall === wall.id && o.pos > along) { o.wall = corner.id; o.pos -= along; } });
+  plan.openings.concat(plan.frames).forEach(o => { if (o.wall === wall.id && o.pos > along) { o.wall = corner.id; o.pos -= along; } });
   if (plan.room.wallColors[wall.id]) plan.room.wallColors[corner.id] = plan.room.wallColors[wall.id];
   plan.room.verts.splice(wall.index + 1, 0, corner);
   clampOpenings();
@@ -467,18 +539,25 @@ export function normalizePlan(data) {
       },
       openings: [],
       items: [],
+      frames: [],
     };
 
     for (const item of Array.isArray(data.items) ? data.items : []) {
       const def = ITEM_DEFS[item && item.type];
       if (!def || ![item.x, item.y, item.w, item.d, item.h].every(isNumber) || item.w <= 0 || item.d <= 0) continue;
       const materials = isFlat(def.kind) ? RUG_MATERIALS : MATERIALS;
-      plan.items.push({
+      const clean = {
         id: String(item.id), type: item.type, name: String(item.name || def.name).slice(0, 60),
         x: item.x, y: item.y, rot: isNumber(item.rot) ? ((item.rot % 360) + 360) % 360 : 0,
         w: Math.min(12, item.w), d: Math.min(12, item.d), h: Math.min(12, Math.max(0.005, item.h)),
         color: hexOr(item.color, def.color), material: materials[item.material] ? item.material : def.material,
-      });
+      };
+      if (def.extra && 'seat' in def.extra) {
+        clean.seat = isNumber(item.seat) && item.seat > 0 ? item.seat : def.extra.seat;
+        clean.side = item.side === 'left' ? 'left' : 'right';
+        fitSectional(clean);
+      }
+      plan.items.push(clean);
     }
     for (const opening of Array.isArray(data.openings) ? data.openings : []) {
       if (!opening || !OPENING_DEFAULTS[opening.type] || !cornerIds.has(String(opening.wall))) continue;
@@ -488,11 +567,19 @@ export function normalizePlan(data) {
         width: opening.width, height: opening.height, sill: isNumber(opening.sill) ? Math.max(0, opening.sill) : 0,
       });
     }
+    for (const frame of Array.isArray(data.frames) ? data.frames : []) {
+      if (!frame || !cornerIds.has(String(frame.wall))) continue;
+      if (![frame.pos, frame.alt, frame.w, frame.h].every(isNumber) || frame.w <= 0 || frame.h <= 0) continue;
+      plan.frames.push({
+        id: String(frame.id), wall: String(frame.wall), pos: frame.pos, alt: frame.alt,
+        w: Math.min(6, frame.w), h: Math.min(6, frame.h),
+      });
+    }
 
     // Make ids unique, then start the id counter above every number already in use.
     const seen = new Set(cornerIds);
     let renamed = 0;
-    for (const thing of plan.items.concat(plan.openings)) {
+    for (const thing of plan.items.concat(plan.openings, plan.frames)) {
       if (seen.has(thing.id)) thing.id = `x${renamed++}_${thing.id}`;
       seen.add(thing.id);
     }
