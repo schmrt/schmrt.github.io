@@ -1,9 +1,12 @@
 # Roomwright
 
-A 2D room planner that runs entirely in the browser. Draw a room of any polygon shape, place
-and size furniture, add windows, doors and outlets, and set colours and finishes.
+A room planner that runs entirely in the browser. Draw a room of any polygon shape, place
+and size furniture, add windows, doors and outlets, and set colours and finishes. Then switch the
+sheet to 3D to orbit around the room or walk through it.
 
-There is no build step and no dependencies: plain HTML, CSS and JavaScript modules.
+There is no build step: plain HTML, CSS and JavaScript modules. The only dependency is
+[three.js](https://threejs.org), which the 3D view loads from the jsDelivr CDN (see the import map
+in `index.html`) the first time someone opens it. The plan itself works without it.
 
 ## Running it
 
@@ -26,6 +29,7 @@ level of the repository (or in `/docs`) and turn on Pages.
 | `styles.css` | All styling. Colours are CSS custom properties with light and dark values |
 | `js/main.js` | Entry point and the render loop |
 | `js/state.js` | The plan data, undo/redo, selection, view, all actions, storage, saved designs, export/import |
+| `js/view3d.js` | The 3D view: builds a three.js scene from the plan; orbit and walk cameras; click to select |
 | `js/draw.js` | Canvas drawing: grid, room, furniture symbols, material patterns, openings, dimensions |
 | `js/input.js` | Mouse, touch and keyboard handling, hit testing, snapping |
 | `js/panels.js` | Top bar, Room / Furnish / Saved panels, the inspector |
@@ -44,10 +48,25 @@ level of the repository (or in `/docs`) and turn on Pages.
   along the wall.
 - An item's front faces +y in its own coordinates; `rot` is in degrees.
 
+## The 3D view
+
+- The **Plan / 3D** switch at the top of the sheet swaps views. `setView()` in `panels.js` imports
+  `view3d.js` on first use.
+- The scene is rebuilt from scratch whenever the plan changes (it compares the plan's JSON each
+  frame), so edits in the panels, the inspector, undo and redo all show up immediately.
+- **Orbit:** drag to orbit, right-drag or two fingers to pan, scroll or pinch to zoom. Walls between
+  the camera and the room are hidden so you can see in. Click anything to select it.
+- **Walk:** eye height 1.6 m. Drag to look; W A S D or the arrow keys (or the on-screen pad) to
+  move; Shift to go faster. You can't walk through walls or furniture. It starts just inside the
+  first door.
+- Each catalog `kind` has a builder in `BUILDERS` in `view3d.js`. A new kind without one shows as
+  a plain box.
+
 ## Common changes
 
 - **Add a piece of furniture:** add an entry to `CATALOG_SOURCE` in `catalog.js`. Reuse an
-  existing `kind`, or add a new symbol function to `SYMBOLS` in `draw.js`.
+  existing `kind`, or add a new symbol function to `SYMBOLS` in `draw.js` and a 3D builder to
+  `BUILDERS` in `view3d.js`.
 - **Add a material:** add it to `MATERIALS` (or `RUG_MATERIALS` / `FLOOR_MATERIALS`) in
   `catalog.js` and add a pattern with the same key to `PATTERNS` in `draw.js`.
 - **Add a room template:** add a corner list (in feet) to `ROOM_TEMPLATES` in `catalog.js` and a
@@ -61,5 +80,4 @@ JSON text; import validates it in `normalizePlan()` before loading.
 
 ## Not built yet
 
-- A 3D view. Heights are already stored for every item and opening.
 - Wall-mounted pieces such as art and mirrors.
