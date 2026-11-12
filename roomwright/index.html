@@ -6,6 +6,13 @@
 <title>Roomwright</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&family=Barlow+Semi+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="styles.css">
+<!-- three.js, used only by the 3D view (js/view3d.js), which loads the first time someone opens 3D. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 </head>
 <body>
 <div class="app" id="app" data-tab="room">
@@ -25,15 +32,30 @@
   </header>
 
   <main class="work">
-    <section class="sheet" id="sheet">
+    <section class="sheet" id="sheet" data-view="plan">
       <canvas id="plan" aria-label="Floor plan"></canvas>
+      <div class="stage3d" id="stage3d" aria-label="3D view of the room" hidden></div>
       <div class="tools">
-        <div class="seg" role="group" aria-label="Tool">
+        <div class="seg" role="group" aria-label="View">
+          <button data-view="plan" aria-pressed="true">Plan</button><button data-view="3d" aria-pressed="false">3D</button>
+        </div>
+        <div class="seg only2d" role="group" aria-label="Tool">
           <button data-tool="select" aria-pressed="true">Arrange</button><button data-tool="walls" aria-pressed="false">Edit walls</button><button data-tool="draw" aria-pressed="false">Draw room</button>
         </div>
-        <button class="btn" id="fit">Fit</button>
+        <button class="btn only2d" id="fit">Fit</button>
+        <div class="seg only3d" role="group" aria-label="Camera">
+          <button data-cam="orbit" aria-pressed="true">Orbit</button><button data-cam="walk" aria-pressed="false">Walk</button>
+        </div>
+        <button class="btn only3d" id="reset3d">Reset view</button>
       </div>
-      <div class="hint" id="hint"></div>
+      <div class="hint only2d" id="hint"></div>
+      <div class="hint only3d" id="hint3d"></div>
+      <div class="walkpad only3d" id="walkPad" hidden aria-label="Walk">
+        <button class="btn" data-move="fwd" aria-label="Walk forward">&#9650;</button>
+        <button class="btn" data-move="turnL" aria-label="Turn left">&#8630;</button>
+        <button class="btn" data-move="back" aria-label="Walk back">&#9660;</button>
+        <button class="btn" data-move="turnR" aria-label="Turn right">&#8631;</button>
+      </div>
     </section>
 
     <aside class="side left">

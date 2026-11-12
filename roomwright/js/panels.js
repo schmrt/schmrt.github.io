@@ -358,6 +358,28 @@ function renderHint() {
   document.querySelectorAll('[data-tool]').forEach(button => button.setAttribute('aria-pressed', button.dataset.tool === app.tool));
 }
 
+/* ------------------------------------------------------------------ plan / 3D switch */
+
+/** The 3D module, loaded the first time someone opens 3D so the plan works without it. */
+let view3d = null;
+
+async function setView(view) {
+  const sheet = $('#sheet');
+  sheet.dataset.view = view;
+  document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', button.dataset.view === view));
+  if (view !== '3d') { if (view3d) view3d.hide(); requestDraw(); return; }
+  if (!view3d) {
+    $('#hint3d').innerHTML = '<span>Loading the 3D view…</span>';
+    try { view3d = await import('./view3d.js'); }
+    catch (error) {
+      console.error(error);
+      $('#hint3d').innerHTML = '<span>The 3D view could not load. It downloads three.js the first time, so check the connection and try again.</span>';
+      return;
+    }
+  }
+  if (sheet.dataset.view === '3d') view3d.show($('#stage3d'));
+}
+
 /** Refresh everything outside the inspector from app state. Cheap enough to run after every change. */
 export function renderPanels() {
   const { plan } = app;
@@ -385,6 +407,8 @@ function initBar() {
   document.querySelector('.tools').addEventListener('click', event => {
     const button = event.target.closest('[data-tool]');
     if (button) setTool(button.dataset.tool);
+    const viewButton = event.target.closest('[data-view]');
+    if (viewButton) setView(viewButton.dataset.view);
   });
   $('#hint').addEventListener('click', event => {
     if (event.target.id === 'drawDone') finishDrawing();
