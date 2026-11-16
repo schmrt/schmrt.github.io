@@ -73,7 +73,7 @@ nav a {
   text-decoration: none;
 }
 
-nav a:link {
+a:link {
   color: #0f2439;
 }
 
@@ -86,11 +86,11 @@ nav a:hover {
 }
 
 nav a:active {
-  background-color: #4494da;
+  background-color: #2a6fb0;
   color: #ffffff;
 }
 
-nav a:focus {
+a:focus {
   outline: 3px solid #4494da;
   outline-offset: 2px;
 }
@@ -141,7 +141,7 @@ footer {
   position: absolute;
   top: 1.25em;
   right: 1.5em;
-  background-color: #4494da;
+  background-color: #2a6fb0;
   color: #ffffff;
   font-size: 0.7em;
   font-weight: bold;
@@ -189,19 +189,12 @@ figcaption {
   border-style: none;
 }
 
-/*Tables*/
+/* Tables */
 
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1em;
-}
-
-th,
-td {
-  padding: 0.75em 1em;
-  text-align: left;
-  border-bottom: 1px solid #dce6f5;
 }
 
 caption {
@@ -212,24 +205,31 @@ caption {
   padding-bottom: 0.75em;
 }
 
+th,
+td {
+  padding: 0.75em 1em;
+  text-align: left;
+  border-bottom: 1px solid #dce6f5;
+}
+
 thead th {
-  background-color: #0F2439;
-  color: #FFFFFF;
+  background-color: #0f2439;
+  color: #ffffff;
 }
 
 tbody tr:nth-of-type(even) {
-  background-color: #F3F7FD;
+  background-color: #f3f7fd;
 }
 
 tbody th {
   font-weight: normal;
-  color: #0F2439;
+  color: #0f2439;
 }
 
 tfoot th,
 tfoot td {
   font-weight: bold;
-  border-top: 2px solid #0F2439;
+  border-top: 2px solid #0f2439;
 }
 
 /* Forms */
@@ -243,13 +243,13 @@ form {
 .field {
   display: flex;
   flex-direction: column;
-  gap: .4em;
+  gap: 0.4em;
 }
 
 .field label,
 legend {
   font-weight: bold;
-  color: #0F2439;
+  color: #0f2439;
 }
 
 input[type="text"],
@@ -257,10 +257,10 @@ input[type="email"],
 select,
 textarea {
   font: inherit;
-  padding: .7em .9em;
-  border: 1px solid #B8C7DD;
+  padding: 0.7em 0.9em;
+  border: 1px solid #b8c7dd;
   border-radius: 8px;
-  background-color: #FFFFFF;
+  background-color: #ffffff;
 }
 
 textarea {
@@ -270,12 +270,12 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 3px solid #4494DA;
+  outline: 3px solid #4494da;
   outline-offset: 2px;
 }
 
 fieldset {
-  border: 1px solid #DCE6F5;
+  border: 1px solid #dce6f5;
   border-radius: 8px;
   padding: 1em 1.25em;
   margin: 0;
@@ -288,9 +288,9 @@ fieldset label {
 button {
   font: inherit;
   font-weight: bold;
-  background-color: #0F2439;
-  color: #FFFFFF;
-  padding: .8em 1.75em;
+  background-color: #0f2439;
+  color: #ffffff;
+  padding: 0.8em 1.75em;
   border: none;
   border-radius: 999px;
   cursor: pointer;
@@ -298,10 +298,19 @@ button {
 }
 
 button:hover {
-  background-color: #4494DA;
+  background-color: #2A6FB0;
 }
 
 button:focus {
-  outline: 3px solid #4494DA;
+  outline: 3px solid #4494da;
   outline-offset: 2px;
+}
+
+.form-message {
+  background-color: #f3f7fd;
+  border: 1px solid #dce6f5;
+  border-radius: 8px;
+  padding: 1em 1.25em;
+  margin: 0;
+  color: #0f2439;
 }
