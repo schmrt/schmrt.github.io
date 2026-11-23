@@ -1,132 +1,249 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Roomwright</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&family=Barlow+Semi+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="styles.css">
-<!-- three.js, used only by the 3D view (js/view3d.js), which loads the first time someone opens 3D. -->
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-} }
-</script>
-</head>
-<body>
-<div class="app" id="app" data-tab="room">
-  <header class="bar">
-    <div class="brand">
-      <svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2 2h18v11h-7v7H2z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="miter"/><rect x="5.5" y="5.5" width="6" height="4" fill="var(--accent)"/></svg>
-      Roomwright
-    </div>
-    <input class="name" id="planName" aria-label="Plan name" maxlength="60">
-    <span class="spacer"></span>
-    <span class="readout" id="readout"></span>
-    <div class="seg" role="group" aria-label="Units">
-      <button id="uImp" aria-pressed="true">ft / in</button><button id="uMet" aria-pressed="false">m / cm</button>
-    </div>
-    <button class="btn" id="undo" title="Undo (Ctrl+Z)">Undo</button>
-    <button class="btn" id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Roomwright</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&family=Barlow+Semi+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- three.js, used only by the 3D view (js/view3d.js), which loads the first time someone opens 3D. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <script
+    async
+    src="https://www.googletagmanager.com/gtm.js?id=GTM-5VQBN2PX"
+  ></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+  </script>
+  <body>
+    <div class="app" id="app" data-tab="room">
+      <header class="bar">
+        <div class="brand">
+          <svg viewBox="0 0 22 22" aria-hidden="true">
+            <path
+              d="M2 2h18v11h-7v7H2z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linejoin="miter"
+            />
+            <rect x="5.5" y="5.5" width="6" height="4" fill="var(--accent)" />
+          </svg>
+          Roomwright
+        </div>
+        <input
+          class="name"
+          id="planName"
+          aria-label="Plan name"
+          maxlength="60"
+        />
+        <span class="spacer"></span>
+        <span class="readout" id="readout"></span>
+        <div class="seg" role="group" aria-label="Units">
+          <button id="uImp" aria-pressed="true">ft / in</button
+          ><button id="uMet" aria-pressed="false">m / cm</button>
+        </div>
+        <button class="btn" id="undo" title="Undo (Ctrl+Z)">Undo</button>
+        <button class="btn" id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      </header>
 
-  <main class="work">
-    <section class="sheet" id="sheet" data-view="plan">
-      <canvas id="plan" aria-label="Floor plan"></canvas>
-      <div class="stage3d" id="stage3d" aria-label="3D view of the room" hidden></div>
-      <div class="tools">
-        <div class="seg" role="group" aria-label="View">
-          <button data-view="plan" aria-pressed="true">Plan</button><button data-view="wall" aria-pressed="false">Wall</button><button data-view="3d" aria-pressed="false">3D</button>
-        </div>
-        <div class="seg onlyplan" role="group" aria-label="Tool">
-          <button data-tool="select" aria-pressed="true">Arrange</button><button data-tool="walls" aria-pressed="false">Edit walls</button><button data-tool="draw" aria-pressed="false">Draw room</button>
-        </div>
-        <button class="btn onlyplan" id="fit">Fit</button>
-        <div class="seg only3d" role="group" aria-label="Camera">
-          <button data-cam="orbit" aria-pressed="true">Orbit</button><button data-cam="walk" aria-pressed="false">Walk</button>
-        </div>
-        <button class="btn only3d" id="reset3d">Reset view</button>
-      </div>
-      <div class="hint only2d" id="hint"></div>
-      <div class="hint only3d" id="hint3d"></div>
-      <div class="walkpad only3d" id="walkPad" hidden aria-label="Walk">
-        <button class="btn" data-move="fwd" aria-label="Walk forward">&#9650;</button>
-        <button class="btn" data-move="turnL" aria-label="Turn left">&#8630;</button>
-        <button class="btn" data-move="back" aria-label="Walk back">&#9660;</button>
-        <button class="btn" data-move="turnR" aria-label="Turn right">&#8631;</button>
-      </div>
-    </section>
-
-    <aside class="side left">
-      <div class="tabs" role="tablist">
-        <button role="tab" data-tab="room" aria-selected="true">Room</button>
-        <button role="tab" data-tab="furnish" aria-selected="false">Furnish</button>
-        <button role="tab" data-tab="frames" aria-selected="false">Frames</button>
-        <button role="tab" data-tab="saved" aria-selected="false">Saved</button>
-        <button role="tab" data-tab="selected" aria-selected="false" class="m-only">Selected</button>
-      </div>
-      <div class="panel" id="p-room">
-        <div class="grp">
-          <h3>Shape</h3>
-          <div class="btns">
-            <button class="btn small" data-tpl="rect">Rectangle</button>
-            <button class="btn small" data-tpl="l">L-shape</button>
-            <button class="btn small" data-tpl="t">T-shape</button>
-            <button class="btn small" data-tpl="bay">Bay window</button>
+      <main class="work">
+        <section class="sheet" id="sheet" data-view="plan">
+          <canvas id="plan" aria-label="Floor plan"></canvas>
+          <div
+            class="stage3d"
+            id="stage3d"
+            aria-label="3D view of the room"
+            hidden
+          ></div>
+          <div class="tools">
+            <div class="seg" role="group" aria-label="View">
+              <button data-view="plan" aria-pressed="true">Plan</button
+              ><button data-view="wall" aria-pressed="false">Wall</button
+              ><button data-view="3d" aria-pressed="false">3D</button>
+            </div>
+            <div class="seg onlyplan" role="group" aria-label="Tool">
+              <button data-tool="select" aria-pressed="true">Arrange</button
+              ><button data-tool="walls" aria-pressed="false">Edit walls</button
+              ><button data-tool="draw" aria-pressed="false">Draw room</button>
+            </div>
+            <button class="btn onlyplan" id="fit">Fit</button>
+            <div class="seg only3d" role="group" aria-label="Camera">
+              <button data-cam="orbit" aria-pressed="true">Orbit</button
+              ><button data-cam="walk" aria-pressed="false">Walk</button>
+            </div>
+            <button class="btn only3d" id="reset3d">Reset view</button>
           </div>
-          <p class="note">Pick a starting shape, then use Edit walls to drag corners, or Draw room to trace any polygon.</p>
-          <div class="row"><label for="ceil">Ceiling</label><input class="field" id="ceil"></div>
-        </div>
-        <div class="grp">
-          <h3>Windows, doors, outlets</h3>
-          <div class="btns">
-            <button class="btn small" data-open="window">Add window</button>
-            <button class="btn small" data-open="door">Add door</button>
-            <button class="btn small" data-open="outlet">Add outlet</button>
+          <div class="hint only2d" id="hint"></div>
+          <div class="hint only3d" id="hint3d"></div>
+          <div class="walkpad only3d" id="walkPad" hidden aria-label="Walk">
+            <button class="btn" data-move="fwd" aria-label="Walk forward">
+              &#9650;
+            </button>
+            <button class="btn" data-move="turnL" aria-label="Turn left">
+              &#8630;
+            </button>
+            <button class="btn" data-move="back" aria-label="Walk back">
+              &#9660;
+            </button>
+            <button class="btn" data-move="turnR" aria-label="Turn right">
+              &#8631;
+            </button>
           </div>
-          <p class="note">They go on the selected wall, or the longest one. Drag them along any wall.</p>
-        </div>
-        <div class="grp">
-          <h3>Wall paint, all walls</h3>
-          <div class="chips" id="wallChips"></div>
-          <p class="note">To paint one wall, select it on the plan.</p>
-        </div>
-        <div class="grp">
-          <h3>Floor</h3>
-          <div class="row"><label for="floorMat">Material</label>
-            <select class="field" id="floorMat"><option value="planks">Wood planks</option><option value="tile">Tile</option><option value="carpet">Carpet</option><option value="concrete">Concrete</option></select></div>
-          <div class="chips" id="floorChips"></div>
-        </div>
-      </div>
-      <div class="panel" id="p-furnish"></div>
-      <div class="panel" id="p-frames"></div>
-      <div class="panel" id="p-saved">
-        <div class="grp">
-          <h3>Saved designs</h3>
-          <div class="btns"><button class="btn small" id="saveDesign">Save this design</button></div>
-          <p class="note" id="libMsg" role="status">Designs are saved under the plan name at the top. Saving again with the same name updates it.</p>
-          <ul class="lib" id="lib"></ul>
-        </div>
-        <div class="grp">
-          <h3>Export</h3>
-          <div class="btns"><button class="btn small" id="exportBtn">Copy design as text</button></div>
-          <p class="note" id="expMsg" role="status">Paste the text into a note or a file to keep a backup.</p>
-          <textarea class="field area" id="expText" readonly hidden aria-label="Design text"></textarea>
-        </div>
-        <div class="grp">
-          <h3>Import</h3>
-          <textarea class="field area" id="impText" placeholder="Paste design text here" aria-label="Design text to import"></textarea>
-          <div class="btns"><button class="btn small" id="impBtn">Load pasted design</button><label class="btn small filebtn">Choose a file<input type="file" id="impFile" accept=".json,.txt,application/json,text/plain"></label></div>
-          <p class="note" id="impMsg" role="status">Loading replaces the plan on screen. Undo brings it back.</p>
-        </div>
-      </div>
-    </aside>
+        </section>
 
-    <aside class="side right"><div class="panel" id="insp"></div></aside>
-  </main>
-</div>
+        <aside class="side left">
+          <div class="tabs" role="tablist">
+            <button role="tab" data-tab="room" aria-selected="true">
+              Room
+            </button>
+            <button role="tab" data-tab="furnish" aria-selected="false">
+              Furnish
+            </button>
+            <button role="tab" data-tab="frames" aria-selected="false">
+              Frames
+            </button>
+            <button role="tab" data-tab="saved" aria-selected="false">
+              Saved
+            </button>
+            <button
+              role="tab"
+              data-tab="selected"
+              aria-selected="false"
+              class="m-only"
+            >
+              Selected
+            </button>
+          </div>
+          <div class="panel" id="p-room">
+            <div class="grp">
+              <h3>Shape</h3>
+              <div class="btns">
+                <button class="btn small" data-tpl="rect">Rectangle</button>
+                <button class="btn small" data-tpl="l">L-shape</button>
+                <button class="btn small" data-tpl="t">T-shape</button>
+                <button class="btn small" data-tpl="bay">Bay window</button>
+              </div>
+              <p class="note">
+                Pick a starting shape, then use Edit walls to drag corners, or
+                Draw room to trace any polygon.
+              </p>
+              <div class="row">
+                <label for="ceil">Ceiling</label
+                ><input class="field" id="ceil" />
+              </div>
+            </div>
+            <div class="grp">
+              <h3>Windows, doors, outlets</h3>
+              <div class="btns">
+                <button class="btn small" data-open="window">Add window</button>
+                <button class="btn small" data-open="door">Add door</button>
+                <button class="btn small" data-open="outlet">Add outlet</button>
+              </div>
+              <p class="note">
+                They go on the selected wall, or the longest one. Drag them
+                along any wall.
+              </p>
+            </div>
+            <div class="grp">
+              <h3>Wall paint, all walls</h3>
+              <div class="chips" id="wallChips"></div>
+              <p class="note">To paint one wall, select it on the plan.</p>
+            </div>
+            <div class="grp">
+              <h3>Floor</h3>
+              <div class="row">
+                <label for="floorMat">Material</label>
+                <select class="field" id="floorMat">
+                  <option value="planks">Wood planks</option>
+                  <option value="tile">Tile</option>
+                  <option value="carpet">Carpet</option>
+                  <option value="concrete">Concrete</option>
+                </select>
+              </div>
+              <div class="chips" id="floorChips"></div>
+            </div>
+          </div>
+          <div class="panel" id="p-furnish"></div>
+          <div class="panel" id="p-frames"></div>
+          <div class="panel" id="p-saved">
+            <div class="grp">
+              <h3>Saved designs</h3>
+              <div class="btns">
+                <button class="btn small" id="saveDesign">
+                  Save this design
+                </button>
+              </div>
+              <p class="note" id="libMsg" role="status">
+                Designs are saved under the plan name at the top. Saving again
+                with the same name updates it.
+              </p>
+              <ul class="lib" id="lib"></ul>
+            </div>
+            <div class="grp">
+              <h3>Export</h3>
+              <div class="btns">
+                <button class="btn small" id="exportBtn">
+                  Copy design as text
+                </button>
+              </div>
+              <p class="note" id="expMsg" role="status">
+                Paste the text into a note or a file to keep a backup.
+              </p>
+              <textarea
+                class="field area"
+                id="expText"
+                readonly
+                hidden
+                aria-label="Design text"
+              ></textarea>
+            </div>
+            <div class="grp">
+              <h3>Import</h3>
+              <textarea
+                class="field area"
+                id="impText"
+                placeholder="Paste design text here"
+                aria-label="Design text to import"
+              ></textarea>
+              <div class="btns">
+                <button class="btn small" id="impBtn">Load pasted design</button
+                ><label class="btn small filebtn"
+                  >Choose a file<input
+                    type="file"
+                    id="impFile"
+                    accept=".json,.txt,application/json,text/plain"
+                /></label>
+              </div>
+              <p class="note" id="impMsg" role="status">
+                Loading replaces the plan on screen. Undo brings it back.
+              </p>
+            </div>
+          </div>
+        </aside>
 
-<script type="module" src="js/main.js"></script>
-</body>
+        <aside class="side right"><div class="panel" id="insp"></div></aside>
+      </main>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
 </html>
